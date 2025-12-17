@@ -457,8 +457,7 @@ app.get('/api/movimenti/storico/:ubicazione', async (req, res) => {
           movmag.mm_colli AS colli,
           movmag.mm_quant AS quantita,
           movmag.mm_ultagg AS dataMovimento,
-          movmag.mm_numdoc AS numeroDocumento,
-          movmag.mm_utente AS utente
+          movmag.mm_numdoc AS numeroDocumento
         FROM movmag
         INNER JOIN tabcaum ON movmag.mm_causale = tabcaum.tb_codcaum
         LEFT JOIN artico ON movmag.mm_codart = artico.ar_codart
@@ -500,8 +499,7 @@ app.get('/api/movimenti/storico-articolo/:codart', async (req, res) => {
           movmag.mm_colli AS colli,
           movmag.mm_quant AS quantita,
           movmag.mm_ultagg AS dataMovimento,
-          movmag.mm_numdoc AS numeroDocumento,
-          movmag.mm_utente AS utente
+          movmag.mm_numdoc AS numeroDocumento
         FROM movmag
         INNER JOIN tabcaum ON movmag.mm_causale = tabcaum.tb_codcaum
         LEFT JOIN artico ON movmag.mm_codart = artico.ar_codart
