@@ -8,6 +8,9 @@ interface LocationTooltipProps {
   mouseY: number;
   onClose: () => void;
   onMoveArticle?: (destinationCode: string, quantity: number) => Promise<void>;
+  onStartSelectDestination?: () => void;
+  isSelectingDestination?: boolean;
+  selectedDestination?: string | null;
 }
 
 export const LocationTooltip: React.FC<LocationTooltipProps> = ({
@@ -15,7 +18,10 @@ export const LocationTooltip: React.FC<LocationTooltipProps> = ({
   mouseX,
   mouseY,
   onClose,
-  onMoveArticle
+  onMoveArticle,
+  onStartSelectDestination,
+  isSelectingDestination,
+  selectedDestination
 }) => {
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: mouseX, y: mouseY });
@@ -93,6 +99,9 @@ export const LocationTooltip: React.FC<LocationTooltipProps> = ({
             location={location} 
             showCoordinates={true} 
             onMoveArticle={onMoveArticle}
+            onStartSelectDestination={onStartSelectDestination}
+            isSelectingDestination={isSelectingDestination}
+            selectedDestination={selectedDestination}
           />
         </div>
       </div>

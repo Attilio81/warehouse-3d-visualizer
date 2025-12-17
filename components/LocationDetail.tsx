@@ -1,22 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LocationData } from '../types';
-import { Map, Box, Layers, Barcode, PackagePlus, Send, X, Loader2 } from 'lucide-react';
+import { Map, Box, Layers, Barcode, PackagePlus, Send, X, Loader2, MousePointer2 } from 'lucide-react';
 
 interface LocationDetailProps {
   location: LocationData;
   showCoordinates?: boolean;
   onMoveArticle?: (destinationCode: string, quantity: number) => Promise<void>;
+  onStartSelectDestination?: () => void;
+  isSelectingDestination?: boolean;
+  selectedDestination?: string | null;
 }
 
 export const LocationDetail: React.FC<LocationDetailProps> = ({ 
   location, 
   showCoordinates = true,
-  onMoveArticle
+  onMoveArticle,
+  onStartSelectDestination,
+  isSelectingDestination = false,
+  selectedDestination
 }) => {
   const [showMoveForm, setShowMoveForm] = useState(false);
   const [destinationCode, setDestinationCode] = useState('');
   const [quantity, setQuantity] = useState(location.quantity || 0);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Aggiorna destinazione quando viene selezionata dalla mappa
+  useEffect(() => {
+    if (selectedDestination) {
+      setDestinationCode(selectedDestination);
+    }
+  }, [selectedDestination]);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -150,15 +164,36 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
 
               <div>
                 <label className="text-xs text-slate-500 block mb-1">Ubicazione Destinazione</label>
-                <input
-                  type="text"
-                  value={destinationCode}
-                  onChange={(e) => setDestinationCode(e.target.value.toUpperCase())}
-                  placeholder="es. 01 02 03"
-                  className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-slate-600"
-                  disabled={isSubmitting}
-                  autoFocus
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={destinationCode}
+                    onChange={(e) => setDestinationCode(e.target.value.toUpperCase())}
+                    placeholder="es. 01 02 03"
+                    className="flex-1 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-slate-600"
+                    disabled={isSubmitting || isSelectingDestination}
+                  />
+                  {onStartSelectDestination && (
+                    <button
+                      type="button"
+                      onClick={onStartSelectDestination}
+                      disabled={isSubmitting}
+                      className={`px-3 py-2 rounded border transition-colors flex items-center gap-1 ${
+                        isSelectingDestination
+                          ? 'bg-blue-600 border-blue-400 text-white animate-pulse'
+                          : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                      }`}
+                      title="Seleziona sulla mappa"
+                    >
+                      <MousePointer2 size={16} />
+                    </button>
+                  )}
+                </div>
+                {isSelectingDestination && (
+                  <div className="text-[10px] text-blue-400 mt-1 animate-pulse">
+                    👆 Clicca su un'ubicazione nella mappa...
+                  </div>
+                )}
               </div>
 
               <button

@@ -37,6 +37,11 @@ export function App() {
   const [selectedLocationsForPath, setSelectedLocationsForPath] = useState<string[]>([]);
   const [fpsMode, setFpsMode] = useState(false);
 
+  // Stato per selezione destinazione movimento
+  const [isSelectingDestination, setIsSelectingDestination] = useState(false);
+  const [selectedDestination, setSelectedDestination] = useState<string | null>(null);
+  const [sourceLocationId, setSourceLocationId] = useState<number | null>(null);
+
   const warehouseRef = useRef<WarehouseController>(null);
 
   // Get available levels for filter (memoized for use in keyboard shortcuts)
@@ -151,6 +156,14 @@ export function App() {
   }, [locations, heatmapData]);
 
   const handleSelectLocation = (loc: LocationData | null, mouseX?: number, mouseY?: number) => {
+    // Se siamo in modalità selezione destinazione, imposta la destinazione invece di selezionare
+    if (isSelectingDestination && loc) {
+      const destCode = loc.locationCode || loc.originalString;
+      setSelectedDestination(destCode);
+      setIsSelectingDestination(false);
+      return;
+    }
+
     if (loc) {
       setSelectedLocationId(loc.id);
       if (mouseX !== undefined && mouseY !== undefined) {
@@ -389,6 +402,8 @@ export function App() {
             onClose={() => {
               setSelectedLocationId(null);
               setTooltipPosition(null);
+              setIsSelectingDestination(false);
+              setSelectedDestination(null);
             }}
             onMoveArticle={async (destinationCode, quantity) => {
               if (!selectedLocation.productCode) throw new Error('Nessun articolo da spostare');
@@ -404,10 +419,18 @@ export function App() {
                 note: 'Movimento da visualizzatore 3D'
               });
               
-              // Chiudi il tooltip dopo il movimento
+              // Chiudi il tooltip e resetta stato selezione
               setSelectedLocationId(null);
               setTooltipPosition(null);
+              setIsSelectingDestination(false);
+              setSelectedDestination(null);
             }}
+            onStartSelectDestination={() => {
+              setIsSelectingDestination(true);
+              setSelectedDestination(null);
+            }}
+            isSelectingDestination={isSelectingDestination}
+            selectedDestination={selectedDestination}
           />
         );
       })()}
