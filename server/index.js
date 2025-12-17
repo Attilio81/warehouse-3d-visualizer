@@ -456,14 +456,14 @@ app.get('/api/movimenti/storico/:ubicazione', async (req, res) => {
           tabcaum.tb_esist AS tipoMovimento,
           movmag.mm_colli AS colli,
           movmag.mm_quant AS quantita,
-          movmag.mm_dtmov AS dataMovimento,
+          movmag.mm_ultagg AS dataMovimento,
           movmag.mm_numdoc AS numeroDocumento,
           movmag.mm_utente AS utente
         FROM movmag
         INNER JOIN tabcaum ON movmag.mm_causale = tabcaum.tb_codcaum
         LEFT JOIN artico ON movmag.mm_codart = artico.ar_codart
         WHERE movmag.mm_ubicaz = @ubicazione
-        ORDER BY movmag.mm_dtmov DESC
+        ORDER BY movmag.mm_ultagg DESC
       `);
 
     // Map tipoMovimento: -1 = uscita, 1 = entrata
@@ -499,14 +499,14 @@ app.get('/api/movimenti/storico-articolo/:codart', async (req, res) => {
           tabcaum.tb_esist AS tipoMovimento,
           movmag.mm_colli AS colli,
           movmag.mm_quant AS quantita,
-          movmag.mm_dtmov AS dataMovimento,
+          movmag.mm_ultagg AS dataMovimento,
           movmag.mm_numdoc AS numeroDocumento,
           movmag.mm_utente AS utente
         FROM movmag
         INNER JOIN tabcaum ON movmag.mm_causale = tabcaum.tb_codcaum
         LEFT JOIN artico ON movmag.mm_codart = artico.ar_codart
         WHERE movmag.mm_codart = @codart
-        ORDER BY movmag.mm_dtmov DESC
+        ORDER BY movmag.mm_ultagg DESC
       `);
 
     const movements = result.recordset.map(m => ({
