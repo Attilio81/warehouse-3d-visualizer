@@ -58,11 +58,13 @@ export const LocationTooltip: React.FC<LocationTooltipProps> = ({
 
   return (
     <>
-      {/* Overlay to close on click outside */}
-      <div
-        className="fixed inset-0 z-40"
-        onClick={onClose}
-      />
+      {/* Overlay to close on click outside - disabled when selecting destination */}
+      {!isSelectingDestination && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={onClose}
+        />
+      )}
       
       {/* Tooltip */}
       <div
