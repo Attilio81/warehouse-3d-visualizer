@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(timeout /t 5 /nobreak)",
+      "Bash(ping:*)",
+      "Bash(curl:*)",
+      "Bash(node:*)",
+      "Bash(findstr:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill /F /PID 361468)",
+      "Bash(taskkill:*)",
+      "Bash(npm run client:*)",
+      "Bash(timeout /t 10 /nobreak)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "name": "Warehouse 3D Visualizer",
+  "description": "A high-performance 3D warehouse visualization tool that maps location codes to a navigateable 3D environment.",
+  "requestFramePermissions": []
+}
