@@ -5,12 +5,13 @@
 2. [Primi Passi](#primi-passi)
 3. [Interfaccia Utente](#interfaccia-utente)
 4. [Navigazione 3D](#navigazione-3d)
-5. [Funzionalità Principali](#funzionalità-principali)
-6. [Gestione Movimenti](#gestione-movimenti)
-7. [Ottimizzazione Magazzino](#ottimizzazione-magazzino)
-8. [Ricerca e Filtri](#ricerca-e-filtri)
-9. [FAQ](#faq)
-10. [Risoluzione Problemi](#risoluzione-problemi)
+5. [Keyboard Shortcuts](#keyboard-shortcuts)
+6. [Funzionalità Principali](#funzionalità-principali)
+7. [Gestione Movimenti](#gestione-movimenti)
+8. [Ottimizzazione Magazzino](#ottimizzazione-magazzino)
+9. [Ricerca e Filtri](#ricerca-e-filtri)
+10. [FAQ](#faq)
+11. [Risoluzione Problemi](#risoluzione-problemi)
 
 ---
 
@@ -19,7 +20,9 @@
 Warehouse 3D Visualizer è un'applicazione web professionale per la gestione visuale e l'ottimizzazione di magazzini. Permette di:
 
 - Visualizzare il magazzino in un ambiente 3D interattivo
-- Gestire movimenti di merce tra ubicazioni
+- **Navigare in prima persona** con modalità FPS
+- Gestire movimenti di merce tra ubicazioni con **selezione visuale**
+- Ricercare per ubicazione, articolo o **barcode**
 - Analizzare l'utilizzo del magazzino con heatmap
 - Ottimizzare i percorsi di picking
 - Monitorare stock e movimenti in tempo reale
@@ -52,9 +55,10 @@ Warehouse 3D Visualizer è un'applicazione web professionale per la gestione vis
 
 Al primo accesso vedrete:
 - Una vista 3D del magazzino con tutte le ubicazioni
-- Pannello laterale destro con statistiche generali
+- **Etichette corridoi** visualizzate a pavimento
+- Sidebar laterale con **sezioni collassabili**
 - Barra di ricerca in alto
-- Pannelli funzionali nella parte inferiore
+- Pannelli funzionali organizzati per categoria
 
 ---
 
@@ -81,13 +85,15 @@ Al primo accesso vedrete:
 ### Elementi dell'Interfaccia
 
 #### 1. Barra Superiore
-- **Campo Ricerca**: Cerca ubicazioni per codice
+- **Campo Ricerca**: Cerca per ubicazione, articolo o barcode
 - **Filtri**: Filtra visualizzazione (Tutte/Piene/Vuote)
+- **Filtro Piano**: Filtra per livello specifico (1-5)
 - **Pulsante Ricarica**: Aggiorna dati dal database
 
 #### 2. Vista 3D (Centrale)
 - Visualizzazione tridimensionale del magazzino
 - Scaffalature rappresentate come cubi colorati
+- **Etichette corridoi a pavimento** per orientamento
 - Pavimento grigio con griglia di riferimento
 
 #### 3. Pannello Statistiche (Destra)
@@ -98,9 +104,15 @@ Al primo accesso vedrete:
 - **Posizioni**: Numero posizioni per corridoio
 - **Livelli**: Numero piani per scaffalatura
 
-#### 4. Pannelli Funzionali (Basso)
-- **Movimenti**: Gestione movimenti merce
-- **Ottimizzazione**: Analisi e suggerimenti
+#### 4. Sidebar Organizzata
+La sidebar è organizzata in **sezioni collassabili**:
+- **🔌 Connessione**: Stato connessione e ricarica dati
+- **📦 Movimenti**: Gestione movimenti merce
+- **📊 Ottimizzazione**: Heatmap e suggerimenti
+- **👁️ Visualizzazione**: Modalità FPS, etichette corridoi
+- **🔍 Filtri**: Filtri per stato e piano
+- **🎨 Legenda**: Legenda colori
+- **⌨️ Comandi**: Controlli camera
 
 ---
 
@@ -129,29 +141,69 @@ Al primo accesso vedrete:
 
 #### Selezione Ubicazione
 1. Posizionare il cursore sopra un'ubicazione
-2. L'ubicazione si illumina in giallo
+2. L'ubicazione si illumina in blu
 3. Click sinistro per selezionarla
-4. Appare un tooltip con informazioni dettagliate
+4. Appare il pannello **"Dettagli Selezione"** con informazioni dettagliate
 
-#### Informazioni Visualizzate
-- **Codice Ubicazione**: es. "A01-02-03"
+#### Informazioni Visualizzate nel Pannello
+- **Codice Ubicazione**: es. "01 02 03"
 - **Codice Prodotto**: se presente
 - **Descrizione Prodotto**: nome articolo
+- **Barcode**: codice a barre (se disponibile)
 - **Quantità**: pezzi presenti
-- **Movimenti Pendenti**: 
-  - In arrivo (↓)
-  - In uscita (↑)
+- **Coordinate 3D**: posizione nello spazio
+- **Pulsante Sposta Articolo**: per creare movimento rapido
+
+#### Doppio Click
+- **Doppio click** su un punto qualsiasi della scena
+- La camera cambia il **punto di orbita** su quella posizione
+- Utile per focalizzarsi su aree specifiche
 
 ### Legenda Colori
 
 | Colore | Significato |
 |--------|-------------|
-| 🟦 **Blu Chiaro** | Ubicazione vuota |
-| 🟩 **Verde** | Ubicazione con merce |
-| 🟨 **Giallo** | Ubicazione selezionata/hover |
-| 🟧 **Arancione** | Movimenti in arrivo |
-| 🟥 **Rosso scuro** | Movimenti in uscita |
-| 🟪 **Viola** | Movimenti sia in arrivo che uscita |
+| ⚪ **Grigio** | Ubicazione vuota |
+| � **Verde** | Ubicazione con merce |
+| � **Giallo** | Ubicazione selezionata |
+| 🔵 **Blu** | Ubicazione in hover |
+| � **Arancione** | Movimenti in arrivo pendenti |
+| � **Ambra** | Movimenti in uscita pendenti |
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+### Navigazione Camera
+| Tasto | Azione |
+|-------|--------|
+| `+` | Zoom in |
+| `-` | Zoom out |
+| `R` | Reset vista |
+| `F` | Toggle modalità FPS |
+
+### Filtri Rapidi
+| Tasto | Azione |
+|-------|--------|
+| `0` | Mostra tutti i livelli |
+| `1` | Solo livello 1 |
+| `2` | Solo livello 2 |
+| `3` | Solo livello 3 |
+| `4` | Solo livello 4 |
+| `5` | Solo livello 5 |
+
+### Modalità FPS (First Person)
+Quando attiva la modalità FPS:
+| Tasto | Azione |
+|-------|--------|
+| `W` | Avanti |
+| `S` | Indietro |
+| `A` | Sinistra |
+| `D` | Destra |
+| `Space` | Sali |
+| `Shift` | Scendi |
+| `Ctrl` | Sprint (velocità doppia) |
+| `Mouse` | Guarda intorno |
 
 ---
 
@@ -181,17 +233,24 @@ Al primo accesso vedrete:
 
 #### Ricerca per Codice Ubicazione
 1. Click sulla barra di ricerca in alto
-2. Digitare il codice (es. "A01-02-03" o solo "A01")
-3. Le ubicazioni corrispondenti vengono evidenziate
+2. Digitare il codice (es. "01 02 03" o solo "01")
+3. Seleziona dall'elenco dropdown
 4. La camera si focalizza automaticamente
+5. Il pannello **"Dettagli Selezione"** si apre automaticamente
 
 #### Ricerca per Codice Prodotto
 1. Click sulla barra di ricerca
-2. Digitare il codice prodotto (es. "PROD123")
-3. Vengono evidenziate tutte le ubicazioni contenenti quel prodotto
+2. Digitare il codice prodotto (es. "VARI-092")
+3. Vengono mostrate tutte le ubicazioni contenenti quel prodotto
+
+#### Ricerca per Barcode 🆕
+1. Click sulla barra di ricerca
+2. Digitare il codice a barre (es. "2000000074085")
+3. L'ubicazione con quel barcode viene evidenziata
+4. Icona viola 📊 indica match per barcode
 
 #### Cancellare la Ricerca
-- Click sul pulsante **✕** nella barra di ricerca
+- Click sul pulsante **"✕"** nella barra di ricerca
 - Oppure cancellare manualmente il testo
 - La vista torna normale
 
@@ -199,10 +258,31 @@ Al primo accesso vedrete:
 
 ## 📦 Gestione Movimenti
 
+### Metodo Rapido: Spostamento dal Pannello Dettagli
+
+Il modo più veloce per creare un movimento:
+
+1. **Seleziona un'ubicazione** con merce (click sulla scena 3D)
+2. Si apre il pannello **"Dettagli Selezione"**
+3. Clicca il pulsante verde **"📦 Sposta Articolo"**
+4. Compila il form inline:
+   - **Quantità**: Pre-compilata con il totale (modificabile)
+   - **Ubicazione Destinazione**: Due metodi:
+     - ⌨️ Scrivi manualmente il codice
+     - 🖱️ Clicca l'icona puntatore e **seleziona sulla mappa**
+5. Clicca **"Crea Movimento"**
+
+#### Selezione Destinazione sulla Mappa
+1. Clicca l'icona 🖱️ accanto al campo destinazione
+2. Il pulsante diventa **blu lampeggiante**
+3. Appare il messaggio "Clicca su un'ubicazione nella mappa..."
+4. **Clicca su qualsiasi ubicazione** nella scena 3D
+5. Il codice viene inserito automaticamente nel campo
+
 ### Aprire il Pannello Movimenti
 
-1. Click sul pulsante **"📦 Movimenti"** in basso a sinistra
-2. Si apre il pannello laterale con la lista movimenti pendenti
+1. Nella sidebar, espandi la sezione **"📦 Movimenti"**
+2. Clicca **"Pannello Movimenti"** per vedere la lista completa
 
 ### Visualizzare Movimenti Pendenti
 
@@ -221,14 +301,14 @@ Nel pannello vengono mostrati tutti i movimenti non ancora confermati:
 └─────────────────────────────────────┘
 ```
 
-### Creare un Nuovo Movimento
+### Creare un Nuovo Movimento (Metodo Classico)
 
-1. Click sul pulsante **"+ Nuovo Movimento"**
+1. Nella sidebar, sezione **Movimenti**, clicca **"Nuovo Movimento"**
 2. Si apre il dialog di creazione
 3. Compilare i campi:
 
 #### Campo Azienda (Codditt)
-- Inserire codice azienda (es. "001")
+- Inserire codice azienda (es. "VITC")
 - Campo obbligatorio
 
 #### Campo Codice Prodotto
@@ -237,18 +317,18 @@ Nel pannello vengono mostrati tutti i movimenti non ancora confermati:
 - Deve esistere nel database
 
 #### Campo Magazzino
-- Inserire codice magazzino (es. "01")
+- Inserire codice magazzino (es. "1")
 - Campo obbligatorio
 
 #### Campo Ubicazione Partenza
 - Inserire codice ubicazione di origine
-- Formato: "A01-02-03" (Scaffalatura-Posizione-Livello)
+- Formato: "01 02 03" (Scaffalatura Posizione Livello)
 - Deve esistere ed essere piena
 
 #### Campo Ubicazione Destinazione
 - Inserire codice ubicazione di arrivo
-- Formato: "B02-04-01"
-- Deve esistere ed essere vuota o compatibile
+- Formato: "02 04 01"
+- Deve esistere
 
 #### Campo Quantità
 - Inserire numero pezzi da spostare
@@ -602,9 +682,19 @@ Quando si richiede assistenza, includere:
 
 ## 📄 Note sulla Versione
 
-**Versione**: 1.0.0  
-**Ultimo aggiornamento**: Dicembre 2024  
+**Versione**: 1.1.0  
+**Ultimo aggiornamento**: 17 Dicembre 2024  
 **Compatibilità**: Node.js 18+, React 19, SQL Server 2016+
+
+### Novità v1.1.0
+- ✅ Spostamento articoli inline dal pannello Dettagli
+- ✅ Selezione destinazione con click sulla mappa
+- ✅ Ricerca per barcode
+- ✅ Modalità FPS (First Person)
+- ✅ Filtro per piano/livello
+- ✅ Keyboard shortcuts
+- ✅ Sidebar con sezioni collassabili
+- ✅ Etichette corridoi a pavimento
 
 ---
 

@@ -96,7 +96,7 @@ export const AisleLabels: React.FC<AisleLabelsProps> = ({ locations, visible = t
           anchorY="middle"
           font={undefined}
         >
-          SPEDIZIONE
+          
           <meshBasicMaterial color="#22C55E" transparent opacity={0.9} />
         </Text>
         

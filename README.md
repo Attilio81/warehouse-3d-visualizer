@@ -2,7 +2,7 @@
 
 Un visualizzatore 3D interattivo per la gestione e ottimizzazione del magazzino con analisi avanzate e suggerimenti intelligenti.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19.2.3-61dafb.svg)
 ![Three.js](https://img.shields.io/badge/Three.js-0.182.0-black.svg)
@@ -14,11 +14,16 @@ Un visualizzatore 3D interattivo per la gestione e ottimizzazione del magazzino 
 ### Visualizzazione 3D
 - **Rendering interattivo** del magazzino in tempo reale
 - **Navigazione intuitiva** con controlli mouse (zoom, rotazione, pan)
+- **Modalità FPS** (First Person) per navigare in prima persona nel magazzino
 - **Colori dinamici** per identificare stato ubicazioni (piena, vuota, con movimenti pendenti)
-- **Selezione ubicazioni** con dettagli completi
-- **Ricerca rapida** per codice ubicazione
+- **Selezione ubicazioni** con dettagli completi e pannello scrollabile
+- **Ricerca rapida** per codice ubicazione, articolo o **barcode**
+- **Etichette corridoi** visualizzate a pavimento per orientamento
+- **Doppio click** per cambiare punto di orbita della camera
 
 ### Gestione Movimenti
+- **Spostamento articoli inline** direttamente dal pannello "Dettagli Selezione"
+- **Selezione destinazione visuale** con click sulla mappa 3D
 - **Creazione movimenti** merce tra ubicazioni
 - **Tracking movimenti pendenti** in tempo reale
 - **Conferma/Eliminazione** movimenti
@@ -179,8 +184,21 @@ Apri il browser su: `http://localhost:3000`
 ### Navigazione 3D
 - **Rotazione**: Click sinistro + drag
 - **Pan**: Click destro + drag
-- **Zoom**: Scroll mouse
-- **Reset vista**: Pulsante "Reset" nella sidebar
+- **Zoom**: Scroll mouse / tasti `+` `-`
+- **Doppio click**: Cambia punto di orbita
+- **Reset vista**: Pulsante "Reset" o tasto `R`
+- **Modalità FPS**: Tasto `F` o toggle nella sidebar
+  - WASD per muoversi
+  - Mouse per guardare
+  - Space/Shift per salire/scendere
+  - Ctrl per sprint
+
+### Keyboard Shortcuts
+- `+` / `-` : Zoom in/out
+- `R` : Reset vista
+- `F` : Toggle modalità FPS
+- `1-5` : Filtra per livello/piano
+- `0` : Mostra tutti i livelli
 
 ### Funzionalità Base
 
@@ -196,24 +214,25 @@ Apri il browser su: `http://localhost:3000`
 
 #### Ricerca Ubicazione
 1. Usa la barra di ricerca nella sidebar
-2. Digita il codice ubicazione
+2. Digita codice ubicazione, codice articolo o **barcode**
 3. Seleziona dall'elenco dropdown
 4. La camera si focalizzerà automaticamente
+5. Il pannello **"Dettagli Selezione"** si apre automaticamente
 
 #### Filtri
 - **Tutte**: Mostra tutte le ubicazioni
 - **Piene**: Solo ubicazioni con giacenza
 - **Vuote**: Solo ubicazioni senza giacenza
+- **Filtro Piano**: Filtra per livello specifico (1-5) o tutti
 
-#### Creare un Movimento
+#### Creare un Movimento (Metodo Rapido)
 1. Seleziona un'ubicazione con giacenza (click)
-2. Clicca "Sposta Articolo"
-3. Compila il form:
-   - Ubicazione destinazione
-   - Quantità
-   - Utente (opzionale)
-   - Note (opzionale)
-4. Conferma
+2. Nel pannello **"Dettagli Selezione"** clicca **"Sposta Articolo"**
+3. Compila il form inline:
+   - **Quantità**: Pre-compilata con il totale disponibile
+   - **Ubicazione destinazione**: Scrivi manualmente OPPURE
+   - Clicca l'icona 🖱️ per **selezionare sulla mappa** con un click
+4. Clicca **"Crea Movimento"**
 
 ### 🎯 Ottimizzazione Logistica
 
@@ -386,6 +405,30 @@ CREATE INDEX idx_lotcpro_ubicaz ON lotcpro(lp_ubicaz, lp_codart, lp_esist);
 5. Apri una Pull Request
 
 ## 📝 Changelog
+
+### v1.1.0 (2024-12-17)
+#### ✨ Nuove Funzionalità
+- ✅ **Spostamento articoli inline** nel pannello "Dettagli Selezione"
+- ✅ **Selezione destinazione visuale** con click sulla mappa 3D
+- ✅ **Ricerca per barcode** oltre a ubicazione e articolo
+- ✅ **Modalità FPS** (First Person) per navigazione immersiva
+- ✅ **Filtro per piano/livello** con keyboard shortcuts (1-5, 0)
+- ✅ **Keyboard shortcuts globali** (+/- zoom, R reset, F fps)
+- ✅ **Etichette corridoi a pavimento** per orientamento
+- ✅ **Doppio click** per cambiare punto di orbita camera
+
+#### 🎨 Miglioramenti UI/UX
+- ✅ **Sidebar riorganizzata** con sezioni collassabili
+- ✅ **Pannello Dettagli Selezione** scrollabile con altezza dinamica
+- ✅ Apertura automatica dettagli su selezione da ricerca
+- ✅ Badge e contatori nelle sezioni sidebar
+- ✅ Indicatore visivo modalità selezione destinazione
+
+#### 🔧 Miglioramenti Tecnici
+- ✅ Componente `CollapsibleSection` riutilizzabile
+- ✅ Animazioni smooth per navigazione camera
+- ✅ Sprint mode (Ctrl) in modalità FPS
+- ✅ Gestione dinamica altezza tooltip
 
 ### v1.0.0 (2024-12-16)
 #### ✨ Nuove Funzionalità
