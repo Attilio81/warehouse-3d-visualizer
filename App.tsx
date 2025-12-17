@@ -167,7 +167,8 @@ export function App() {
   const handleSearchSelect = (location: LocationData) => {
     // Select the location
     setSelectedLocationId(location.id);
-    setTooltipPosition(null); // Non mostrare tooltip dalla ricerca
+    // Mostra dettagli in posizione fissa (centro-destra dello schermo)
+    setTooltipPosition({ x: window.innerWidth - 350, y: 150 });
     // Focus camera on the location
     warehouseRef.current?.focusLocation(location);
   };
