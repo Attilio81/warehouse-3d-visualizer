@@ -75,18 +75,14 @@ const Racks: React.FC<{
         const hasStock = loc.quantity && loc.quantity > 0;
 
         if (hasMovOut) {
-          // Yellow/Orange - Pending outgoing movement
           tempColor.set('#F59E0B'); // Amber - Movement out
         } else if (hasMovIn) {
-          // Orange - Pending incoming movement
           tempColor.set('#FB923C'); // Orange - Movement in
         } else if (hasStock) {
-          // Green - Has stock
           tempColor.set('#10B981'); // Green - Has stock
         } else {
-          // Gray - Empty
           const isEvenAisle = loc.aisle % 2 === 0;
-          const baseColor = isEvenAisle ? '#4B5563' : '#374151'; // Gray shades - Empty
+          const baseColor = isEvenAisle ? '#4B5563' : '#374151';
           tempColor.set(baseColor);
         }
       }

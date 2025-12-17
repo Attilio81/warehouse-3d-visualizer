@@ -399,6 +399,43 @@ app.post('/api/optimization/picking-path', async (req, res) => {
   }
 });
 
+// DEBUG: Get barcode info for an article
+app.get('/api/debug/barcode/:codart', async (req, res) => {
+  try {
+    const { codart } = req.params;
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request()
+      .input('codart', sql.VarChar(50), codart)
+      .query(`
+        SELECT * FROM barcode WHERE bc_codart LIKE '%' + @codart + '%'
+      `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('SQL Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DEBUG: Check if article has stock in any location
+app.get('/api/debug/stock/:codart', async (req, res) => {
+  try {
+    const { codart } = req.params;
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request()
+      .input('codart', sql.VarChar(50), codart)
+      .query(`
+        SELECT lp.*, bc.bc_code as barcode
+        FROM lotcpro lp
+        LEFT JOIN barcode bc ON lp.codditt = bc.codditt AND lp.lp_codart = bc.bc_codart
+        WHERE lp.lp_codart LIKE '%' + @codart + '%' AND lp.lp_esist > 0
+      `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('SQL Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Backend server listening at http://localhost:${port}`);
 });
