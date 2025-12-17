@@ -64,15 +64,17 @@ export const LocationTooltip: React.FC<LocationTooltipProps> = ({
       {/* Tooltip */}
       <div
         ref={tooltipRef}
-        className="fixed z-50 bg-slate-900 backdrop-blur-sm rounded-lg shadow-2xl border border-slate-700"
+        className="fixed z-50 bg-slate-900 backdrop-blur-sm rounded-lg shadow-2xl border border-slate-700 flex flex-col"
         style={{
           left: `${position.x}px`,
           top: `${position.y}px`,
-          minWidth: '320px'
+          minWidth: '320px',
+          maxWidth: '380px',
+          maxHeight: 'calc(100vh - 40px)'
         }}
       >
         {/* Header */}
-        <div className="bg-slate-800 px-4 py-2 rounded-t-lg flex justify-between items-center border-b border-slate-700">
+        <div className="bg-slate-800 px-4 py-2 rounded-t-lg flex justify-between items-center border-b border-slate-700 flex-shrink-0">
           <h3 className="font-bold text-sm text-white">Dettagli Selezione</h3>
           <button
             onClick={onClose}
@@ -85,8 +87,8 @@ export const LocationTooltip: React.FC<LocationTooltipProps> = ({
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-4">
+        {/* Content - Scrollable */}
+        <div className="p-4 overflow-y-auto flex-1">
           <LocationDetail 
             location={location} 
             showCoordinates={true} 
