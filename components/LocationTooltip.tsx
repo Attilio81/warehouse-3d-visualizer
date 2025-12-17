@@ -7,13 +7,15 @@ interface LocationTooltipProps {
   mouseX: number;
   mouseY: number;
   onClose: () => void;
+  onMoveArticle?: (destinationCode: string, quantity: number) => Promise<void>;
 }
 
 export const LocationTooltip: React.FC<LocationTooltipProps> = ({
   location,
   mouseX,
   mouseY,
-  onClose
+  onClose,
+  onMoveArticle
 }) => {
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: mouseX, y: mouseY });
@@ -85,7 +87,11 @@ export const LocationTooltip: React.FC<LocationTooltipProps> = ({
 
         {/* Content */}
         <div className="p-4">
-          <LocationDetail location={location} showCoordinates={true} />
+          <LocationDetail 
+            location={location} 
+            showCoordinates={true} 
+            onMoveArticle={onMoveArticle}
+          />
         </div>
       </div>
     </>

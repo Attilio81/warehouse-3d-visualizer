@@ -390,6 +390,24 @@ export function App() {
               setSelectedLocationId(null);
               setTooltipPosition(null);
             }}
+            onMoveArticle={async (destinationCode, quantity) => {
+              if (!selectedLocation.productCode) throw new Error('Nessun articolo da spostare');
+              
+              await handleCreateMovement({
+                codditt: 'VITC', // TODO: Get from location data
+                lp_codart: selectedLocation.productCode,
+                lp_magaz: '1',
+                ubicaz_partenza: selectedLocation.locationCode || selectedLocation.originalString,
+                ubicaz_destinazione: destinationCode,
+                quantita: quantity,
+                utente: 'WEB3D',
+                note: 'Movimento da visualizzatore 3D'
+              });
+              
+              // Chiudi il tooltip dopo il movimento
+              setSelectedLocationId(null);
+              setTooltipPosition(null);
+            }}
           />
         );
       })()}
