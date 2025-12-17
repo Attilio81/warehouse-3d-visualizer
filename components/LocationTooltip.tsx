@@ -25,38 +25,35 @@ export const LocationTooltip: React.FC<LocationTooltipProps> = ({
 }) => {
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: mouseX, y: mouseY });
+  const [maxHeight, setMaxHeight] = useState(500);
 
   useEffect(() => {
-    if (tooltipRef.current) {
-      const tooltip = tooltipRef.current;
-      const rect = tooltip.getBoundingClientRect();
-      
-      // Adjust position to keep tooltip in viewport
-      let x = mouseX;
-      let y = mouseY;
+    // Calcola posizione e altezza massima disponibile
+    let x = mouseX;
+    let y = mouseY;
+    const tooltipWidth = 350;
+    const margin = 20;
 
-      // Check right edge
-      if (x + rect.width > window.innerWidth - 10) {
-        x = window.innerWidth - rect.width - 10;
-      }
-
-      // Check bottom edge
-      if (y + rect.height > window.innerHeight - 10) {
-        y = window.innerHeight - rect.height - 10;
-      }
-
-      // Check left edge
-      if (x < 10) {
-        x = 10;
-      }
-
-      // Check top edge
-      if (y < 10) {
-        y = 10;
-      }
-
-      setPosition({ x, y });
+    // Check right edge
+    if (x + tooltipWidth > window.innerWidth - margin) {
+      x = window.innerWidth - tooltipWidth - margin;
     }
+
+    // Check left edge
+    if (x < margin) {
+      x = margin;
+    }
+
+    // Check top edge
+    if (y < margin) {
+      y = margin;
+    }
+
+    // Calcola altezza massima disponibile dal punto y fino al fondo dello schermo
+    const availableHeight = window.innerHeight - y - margin;
+    setMaxHeight(Math.max(300, availableHeight));
+
+    setPosition({ x, y });
   }, [mouseX, mouseY]);
 
   return (
@@ -76,7 +73,7 @@ export const LocationTooltip: React.FC<LocationTooltipProps> = ({
           top: `${position.y}px`,
           minWidth: '320px',
           maxWidth: '380px',
-          maxHeight: 'calc(100vh - 40px)'
+          maxHeight: `${maxHeight}px`
         }}
       >
         {/* Header */}
@@ -94,7 +91,10 @@ export const LocationTooltip: React.FC<LocationTooltipProps> = ({
         </div>
 
         {/* Content - Scrollable */}
-        <div className="p-4 overflow-y-auto flex-1">
+        <div 
+          className="p-4 overflow-y-auto"
+          style={{ maxHeight: 'calc(100% - 50px)' }}
+        >
           <LocationDetail 
             location={location} 
             showCoordinates={true} 
