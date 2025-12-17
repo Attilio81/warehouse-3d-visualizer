@@ -7,7 +7,7 @@ import { HeatmapOverlay } from './HeatmapOverlay';
 import { PickingPathVisualizer } from './PickingPathVisualizer';
 import { FirstPersonControls } from './FirstPersonControls';
 import { AisleLabels } from './AisleLabels';
-import { WarehouseFloor, Forklift, Pallet } from './MetalRack';
+import { WarehouseFloor, Pallet } from './MetalRack';
 
 export interface WarehouseController {
   zoomIn: () => void;
@@ -413,10 +413,6 @@ export const WarehouseScene = forwardRef<WarehouseController, WarehouseSceneProp
 
       {/* Warehouse Floor with grid pattern */}
       <WarehouseFloor width={200} depth={200} gridSize={4} />
-
-      {/* Decorative Forklifts */}
-      <Forklift position={[5, 0, 8]} rotation={[0, Math.PI / 4, 0]} />
-      <Forklift position={[-15, 0, 25]} rotation={[0, -Math.PI / 3, 0]} />
 
       {/* Decorative Pallets near shipping zone */}
       <Pallet position={[3, 0, -3]} hasBoxes={true} />

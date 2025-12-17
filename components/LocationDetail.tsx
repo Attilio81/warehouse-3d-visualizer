@@ -1,6 +1,6 @@
 import React from 'react';
 import { LocationData } from '../types';
-import { Map, Box, Layers } from 'lucide-react';
+import { Map, Box, Layers, Barcode } from 'lucide-react';
 
 interface LocationDetailProps {
   location: LocationData;
@@ -49,6 +49,12 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-400">Quantità</span>
               <span className="font-mono text-green-400 font-bold">{location.quantity}</span>
+            </div>
+          )}
+          {location.barcode && (
+            <div className="flex items-center justify-between text-sm mt-2">
+              <span className="text-slate-400 flex items-center gap-2"><Barcode size={14} /> Barcode</span>
+              <span className="font-mono text-blue-400 font-bold">{location.barcode}</span>
             </div>
           )}
         </div>

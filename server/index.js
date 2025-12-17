@@ -22,7 +22,7 @@ const dbConfig = {
   },
 };
 
-// SQL Query - Show ALL locations from anaubic, with stock info and pending movements
+// SQL Query - Show ALL locations from anaubic, with stock info, pending movements and barcodes
 // Using OUTER APPLY to get the product with highest stock (if any exists)
 const QUERY = `
 SELECT
@@ -45,6 +45,9 @@ SELECT
     ISNULL(stock.lp_codart, '') AS lp_codart,
     ISNULL(stock.lp_esist, 0) AS lp_esist,
     ISNULL(stock.ar_descr, '') AS ar_descr,
+    ISNULL(stock.bc_code, '') AS barcode,
+    ISNULL(stock.bc_unmis, '') AS barcode_unmis,
+    ISNULL(stock.bc_quant, 0) AS barcode_quant,
     ISNULL(mov_in.quantita_in, 0) AS mov_in,
     ISNULL(mov_out.quantita_out, 0) AS mov_out
 FROM
@@ -53,10 +56,15 @@ OUTER APPLY (
     SELECT TOP 1
         lotcpro.lp_codart,
         lotcpro.lp_esist,
-        artico.ar_descr
+        artico.ar_descr,
+        bc.bc_code,
+        bc.bc_unmis,
+        bc.bc_quant
     FROM lotcpro
     LEFT JOIN artico ON lotcpro.codditt = artico.codditt
         AND lotcpro.lp_codart = artico.ar_codart
+    LEFT JOIN barcode bc ON lotcpro.codditt = bc.codditt
+        AND lotcpro.lp_codart = bc.bc_codart
     WHERE lotcpro.codditt = anaubic.codditt
         AND lotcpro.lp_ubicaz = anaubic.au_ubicaz
         AND lotcpro.lp_magaz = anaubic.au_magaz

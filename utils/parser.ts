@@ -161,6 +161,9 @@ export const parseSQLData = (data: SQLLocationData[]): { locations: LocationData
       productDesc: row.ar_descr || '',
       quantity: quantity,
       locationCode: row.au_ubicaz,
+      barcode: row.barcode || '',
+      barcodeUnmis: row.barcode_unmis || '',
+      barcodeQuant: typeof row.barcode_quant === 'number' ? row.barcode_quant : parseFloat(row.barcode_quant) || 0,
       movIn: movIn,
       movOut: movOut
     });

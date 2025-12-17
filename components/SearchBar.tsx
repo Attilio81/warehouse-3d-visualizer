@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, X, MapPin, Package } from 'lucide-react';
+import { Search, X, MapPin, Package, Barcode } from 'lucide-react';
 import { LocationData } from '../types';
 
 interface SearchBarProps {
@@ -9,7 +9,7 @@ interface SearchBarProps {
 
 interface SearchResult {
   location: LocationData;
-  matchType: 'location' | 'article';
+  matchType: 'location' | 'article' | 'barcode';
   matchText: string;
 }
 
@@ -39,6 +39,14 @@ export const SearchBar: React.FC<SearchBarProps> = ({ locations, onSelectLocatio
           location: loc,
           matchType: 'location',
           matchText: loc.locationCode
+        });
+      }
+      // Search by barcode
+      else if (loc.barcode && loc.barcode.toLowerCase().includes(query)) {
+        searchResults.push({
+          location: loc,
+          matchType: 'barcode',
+          matchText: `${loc.barcode} → ${loc.productCode || ''}`
         });
       }
       // Search by article code
@@ -121,7 +129,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ locations, onSelectLocatio
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => searchQuery && setIsOpen(results.length > 0)}
-          placeholder="Cerca ubicazione o articolo..."
+          placeholder="Cerca ubicazione, articolo o barcode..."
           className="w-full bg-slate-900 border border-slate-700 rounded pl-10 pr-10 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-500"
         />
         {searchQuery && (
@@ -157,6 +165,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({ locations, onSelectLocatio
               <div className="flex-shrink-0 mt-0.5">
                 {result.matchType === 'location' ? (
                   <MapPin size={16} className="text-blue-400" />
+                ) : result.matchType === 'barcode' ? (
+                  <Barcode size={16} className="text-purple-400" />
                 ) : (
                   <Package size={16} className="text-green-400" />
                 )}
@@ -170,8 +180,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({ locations, onSelectLocatio
                 </div>
 
                 {/* Match Text */}
-                {result.matchType === 'article' && (
-                  <div className="text-slate-400 text-xs truncate mt-0.5">
+                {(result.matchType === 'article' || result.matchType === 'barcode') && (
+                  <div className={`text-xs truncate mt-0.5 ${result.matchType === 'barcode' ? 'text-purple-300' : 'text-slate-400'}`}>
                     {result.matchText}
                   </div>
                 )}

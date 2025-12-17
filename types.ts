@@ -11,6 +11,9 @@ export interface LocationData {
   productDesc?: string;
   quantity?: number;
   locationCode?: string;
+  barcode?: string;     // Codice a barre articolo
+  barcodeUnmis?: string; // Unità di misura barcode
+  barcodeQuant?: number; // Quantità per barcode
   movIn?: number;       // Quantità in arrivo (movimenti pendenti)
   movOut?: number;      // Quantità in uscita (movimenti pendenti)
 }
@@ -37,6 +40,9 @@ export interface SQLLocationData {
   lp_codart: string;
   lp_esist: number;
   ar_descr: string;
+  barcode: string;        // Codice a barre
+  barcode_unmis: string;  // Unità di misura barcode
+  barcode_quant: number;  // Quantità per barcode
   mov_in: number;   // Movimenti in arrivo (pendenti)
   mov_out: number;  // Movimenti in uscita (pendenti)
 }
