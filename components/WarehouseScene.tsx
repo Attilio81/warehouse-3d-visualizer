@@ -123,17 +123,11 @@ const Racks: React.FC<{
   );
 };
 
-const CameraController: React.FC<{ locations: LocationData[] }> = ({ locations }) => {
-  const { camera, controls } = useThree();
-  const initializedRef = useRef(false);
-
-  useEffect(() => {
-    if (locations.length === 0) return;
-
-    // Only auto-position camera on first load, not on filter changes
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-
+// Calculate warehouse center from locations
+const useWarehouseCenter = (locations: LocationData[]) => {
+  return useMemo(() => {
+    if (locations.length === 0) return { x: 0, y: 0, z: 0 };
+    
     let minX = Infinity, maxX = -Infinity;
     let minY = Infinity, maxY = -Infinity;
     let minZ = Infinity, maxZ = -Infinity;
@@ -147,18 +141,91 @@ const CameraController: React.FC<{ locations: LocationData[] }> = ({ locations }
       if (loc.z > maxZ) maxZ = loc.z;
     }
 
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
-    const centerZ = (minZ + maxZ) / 2;
+    return {
+      x: (minX + maxX) / 2,
+      y: (minY + maxY) / 2,
+      z: (minZ + maxZ) / 2,
+      maxDim: Math.max(maxX - minX, maxY - minY, maxZ - minZ)
+    };
+  }, [locations]);
+};
+
+const CameraController: React.FC<{ locations: LocationData[] }> = ({ locations }) => {
+  const { camera, controls } = useThree();
+  const initializedRef = useRef(false);
+  const center = useWarehouseCenter(locations);
+
+  useEffect(() => {
+    if (locations.length === 0) return;
+
+    // Only auto-position camera on first load, not on filter changes
+    if (initializedRef.current) return;
+    initializedRef.current = true;
 
     const controlsRef = controls as any;
     if (controlsRef) {
-      controlsRef.target.set(centerX, centerY, centerZ);
-      const maxDim = Math.max(maxX - minX, maxY - minY, maxZ - minZ);
-      camera.position.set(centerX + maxDim * 0.8, centerY + maxDim * 0.8, centerZ + maxDim * 0.8);
+      controlsRef.target.set(center.x, center.y, center.z);
+      const maxDim = center.maxDim || 50;
+      camera.position.set(center.x + maxDim * 0.8, center.y + maxDim * 0.8, center.z + maxDim * 0.8);
       controlsRef.update();
     }
-  }, [locations, camera, controls]);
+  }, [locations, camera, controls, center]);
+
+  return null;
+};
+
+// Double-click handler to change orbit point
+const OrbitTargetHandler: React.FC = () => {
+  const { camera, controls, raycaster, scene } = useThree();
+  const pointerVec = useMemo(() => new THREE.Vector2(), []);
+  
+  useEffect(() => {
+    const canvas = document.querySelector('canvas');
+    if (!canvas) return;
+
+    const handleDoubleClick = (e: MouseEvent) => {
+      const ctrl = controls as any;
+      if (!ctrl || !ctrl.target) return;
+
+      // Update pointer position
+      const rect = canvas.getBoundingClientRect();
+      pointerVec.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      pointerVec.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      
+      raycaster.setFromCamera(pointerVec, camera);
+      
+      // Find intersections with all meshes
+      const intersects = raycaster.intersectObjects(scene.children, true);
+      
+      if (intersects.length > 0) {
+        const point = intersects[0].point;
+        
+        // Animate to new target
+        const startTarget = ctrl.target.clone();
+        const endTarget = point.clone();
+        const startTime = Date.now();
+        const duration = 500;
+
+        const animate = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const eased = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+          
+          ctrl.target.lerpVectors(startTarget, endTarget, eased);
+          ctrl.update();
+          
+          if (progress < 1) {
+            requestAnimationFrame(animate);
+          }
+        };
+        
+        animate();
+      }
+    };
+
+    canvas.addEventListener('dblclick', handleDoubleClick);
+    return () => canvas.removeEventListener('dblclick', handleDoubleClick);
+  }, [camera, controls, raycaster, scene]);
 
   return null;
 };
@@ -311,6 +378,7 @@ export const WarehouseScene = forwardRef<WarehouseController, WarehouseSceneProp
 
       <CameraController locations={locations} />
       <SceneController ref={ref} />
+      {!fpsMode && <OrbitTargetHandler />}
 
       <ambientLight intensity={0.4} />
       <directionalLight 
