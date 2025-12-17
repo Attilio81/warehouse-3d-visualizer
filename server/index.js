@@ -436,6 +436,91 @@ app.get('/api/debug/stock/:codart', async (req, res) => {
   }
 });
 
+// API: Get movement history for a location (storico movimenti effettuati)
+app.get('/api/movimenti/storico/:ubicazione', async (req, res) => {
+  try {
+    const { ubicazione } = req.params;
+    const { limit = 50 } = req.query;
+    
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request()
+      .input('ubicazione', sql.VarChar, ubicazione)
+      .input('limit', sql.Int, parseInt(limit))
+      .query(`
+        SELECT TOP (@limit)
+          movmag.mm_ubicaz AS ubicazione,
+          movmag.mm_magaz AS magazzino,
+          movmag.mm_codart AS codiceArticolo,
+          artico.ar_descr AS descrizioneArticolo,
+          tabcaum.tb_descaum AS causale,
+          tabcaum.tb_esist AS tipoMovimento,
+          movmag.mm_colli AS colli,
+          movmag.mm_quant AS quantita,
+          movmag.mm_dtmov AS dataMovimento,
+          movmag.mm_numdoc AS numeroDocumento,
+          movmag.mm_utente AS utente
+        FROM movmag
+        INNER JOIN tabcaum ON movmag.mm_causale = tabcaum.tb_codcaum
+        LEFT JOIN artico ON movmag.mm_codart = artico.ar_codart
+        WHERE movmag.mm_ubicaz = @ubicazione
+        ORDER BY movmag.mm_dtmov DESC
+      `);
+
+    // Map tipoMovimento: -1 = uscita, 1 = entrata
+    const movements = result.recordset.map(m => ({
+      ...m,
+      tipo: m.tipoMovimento === 1 ? 'entrata' : 'uscita'
+    }));
+
+    res.json(movements);
+  } catch (err) {
+    console.error('SQL Error:', err);
+    res.status(500).json({ error: 'Failed to fetch movement history', details: err.message });
+  }
+});
+
+// API: Get movement history for an article (storico movimenti per articolo)
+app.get('/api/movimenti/storico-articolo/:codart', async (req, res) => {
+  try {
+    const { codart } = req.params;
+    const { limit = 50 } = req.query;
+    
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request()
+      .input('codart', sql.VarChar, codart)
+      .input('limit', sql.Int, parseInt(limit))
+      .query(`
+        SELECT TOP (@limit)
+          movmag.mm_ubicaz AS ubicazione,
+          movmag.mm_magaz AS magazzino,
+          movmag.mm_codart AS codiceArticolo,
+          artico.ar_descr AS descrizioneArticolo,
+          tabcaum.tb_descaum AS causale,
+          tabcaum.tb_esist AS tipoMovimento,
+          movmag.mm_colli AS colli,
+          movmag.mm_quant AS quantita,
+          movmag.mm_dtmov AS dataMovimento,
+          movmag.mm_numdoc AS numeroDocumento,
+          movmag.mm_utente AS utente
+        FROM movmag
+        INNER JOIN tabcaum ON movmag.mm_causale = tabcaum.tb_codcaum
+        LEFT JOIN artico ON movmag.mm_codart = artico.ar_codart
+        WHERE movmag.mm_codart = @codart
+        ORDER BY movmag.mm_dtmov DESC
+      `);
+
+    const movements = result.recordset.map(m => ({
+      ...m,
+      tipo: m.tipoMovimento === 1 ? 'entrata' : 'uscita'
+    }));
+
+    res.json(movements);
+  } catch (err) {
+    console.error('SQL Error:', err);
+    res.status(500).json({ error: 'Failed to fetch article movement history', details: err.message });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Backend server listening at http://localhost:${port}`);
 });

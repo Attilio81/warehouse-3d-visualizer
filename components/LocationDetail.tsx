@@ -1,6 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { LocationData } from '../types';
-import { Map, Box, Layers, Barcode, PackagePlus, Send, X, Loader2, MousePointer2 } from 'lucide-react';
+import { Map, Box, Layers, Barcode, PackagePlus, Send, X, Loader2, MousePointer2, History, ArrowDownCircle, ArrowUpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+
+interface MovementHistoryItem {
+  ubicazione: string;
+  magazzino: string;
+  codiceArticolo: string;
+  descrizioneArticolo: string;
+  causale: string;
+  tipoMovimento: number;
+  tipo: 'entrata' | 'uscita';
+  colli: number;
+  quantita: number;
+  dataMovimento: string;
+  numeroDocumento: string;
+  utente: string;
+}
 
 interface LocationDetailProps {
   location: LocationData;
@@ -24,6 +39,13 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
   const [quantity, setQuantity] = useState(location.quantity || 0);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Storico movimenti
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [movementHistory, setMovementHistory] = useState<MovementHistoryItem[]>([]);
 
   // Aggiorna destinazione quando viene selezionata dalla mappa
   useEffect(() => {
@@ -31,7 +53,38 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
       setDestinationCode(selectedDestination);
     }
   }, [selectedDestination]);
-  const [error, setError] = useState<string | null>(null);
+
+  // Carica storico movimenti
+  const loadHistory = async () => {
+    if (historyLoading) return;
+    
+    setHistoryLoading(true);
+    setHistoryError(null);
+    
+    try {
+      const locationCode = location.locationCode || location.originalString;
+      const response = await fetch(`http://localhost:4000/api/movimenti/storico/${encodeURIComponent(locationCode)}?limit=20`);
+      
+      if (!response.ok) {
+        throw new Error('Errore nel caricamento dello storico');
+      }
+      
+      const data = await response.json();
+      setMovementHistory(data);
+    } catch (err) {
+      setHistoryError(err instanceof Error ? err.message : 'Errore sconosciuto');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // Toggle storico
+  const toggleHistory = () => {
+    if (!showHistory && movementHistory.length === 0) {
+      loadHistory();
+    }
+    setShowHistory(!showHistory);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,6 +162,85 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
           </div>
         </div>
       )}
+
+      {/* Movement History Section */}
+      <div className="mt-4 pt-3 border-t border-slate-700">
+        <button
+          onClick={toggleHistory}
+          className="w-full bg-slate-700 hover:bg-slate-600 text-white text-sm py-2 px-3 rounded font-medium transition-colors flex items-center justify-center gap-2"
+        >
+          <History size={16} />
+          Storico Movimenti
+          {showHistory ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+
+        {showHistory && (
+          <div className="mt-3 space-y-2">
+            {historyLoading && (
+              <div className="flex items-center justify-center py-4 text-slate-400">
+                <Loader2 size={20} className="animate-spin mr-2" />
+                Caricamento...
+              </div>
+            )}
+
+            {historyError && (
+              <div className="bg-red-900/30 border border-red-500 rounded p-2 text-xs text-red-200">
+                {historyError}
+              </div>
+            )}
+
+            {!historyLoading && !historyError && movementHistory.length === 0 && (
+              <div className="text-center py-4 text-slate-500 text-sm">
+                Nessun movimento trovato
+              </div>
+            )}
+
+            {!historyLoading && movementHistory.length > 0 && (
+              <div className="max-h-48 overflow-y-auto space-y-2">
+                {movementHistory.map((mov, idx) => (
+                  <div
+                    key={idx}
+                    className={`p-2 rounded text-xs border ${
+                      mov.tipo === 'entrata'
+                        ? 'bg-green-900/20 border-green-700/50'
+                        : 'bg-red-900/20 border-red-700/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-1">
+                        {mov.tipo === 'entrata' ? (
+                          <ArrowDownCircle size={12} className="text-green-400" />
+                        ) : (
+                          <ArrowUpCircle size={12} className="text-red-400" />
+                        )}
+                        <span className={mov.tipo === 'entrata' ? 'text-green-400' : 'text-red-400'}>
+                          {mov.causale}
+                        </span>
+                      </div>
+                      <span className="text-slate-500">
+                        {mov.dataMovimento ? new Date(mov.dataMovimento).toLocaleDateString('it-IT') : '-'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300 font-mono">{mov.codiceArticolo}</span>
+                      <span className={`font-bold ${
+                        mov.tipo === 'entrata' ? 'text-green-400' : 'text-red-400'
+                      }`}>
+                        {mov.tipo === 'entrata' ? '+' : '-'}{mov.quantita}
+                      </span>
+                    </div>
+                    {mov.descrizioneArticolo && (
+                      <div className="text-slate-500 truncate mt-1">
+                        {mov.descrizioneArticolo}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Move Article Section */}
       {canMove && onMoveArticle && (
