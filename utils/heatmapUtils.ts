@@ -1,31 +1,58 @@
 import { HeatmapData, LocationData } from '../types';
 
+// Configuration for physical dimensions (must match parser.ts)
+const CONFIG = {
+  AISLE_GAP: 3,
+  BAY_GAP: 1.1,
+  LEVEL_GAP: 1.1,
+};
+
 /**
  * Normalizza i dati della heatmap per la visualizzazione
- * Converte i conteggi di pickup in valori di intensità 0-1
+ * Mappa i dati heatmap alle locations esistenti per usare le coordinate corrette
  */
-export function normalizeHeatmapData(data: Array<{
-  locationCode: string;
-  au_scaff: number;
-  au_posiz: number;
-  au_piano: number;
-  pickupCount: number;
-}>): HeatmapData[] {
-  if (data.length === 0) return [];
+export function normalizeHeatmapData(
+  data: Array<{
+    locationCode: string;
+    pickupCount: number;
+  }>,
+  locations: LocationData[]
+): HeatmapData[] {
+  if (data.length === 0 || locations.length === 0) return [];
+
+  // Crea mappa delle locations per locationCode
+  const locationMap = new Map<string, LocationData>();
+  locations.forEach(loc => {
+    const code = loc.locationCode || loc.originalString;
+    locationMap.set(code, loc);
+  });
 
   // Trova il massimo pickup count
   const maxPickup = Math.max(...data.map(d => d.pickupCount));
-
   if (maxPickup === 0) return [];
 
-  return data.map(item => ({
-    locationCode: item.locationCode,
-    x: item.au_scaff,
-    y: item.au_piano,
-    z: item.au_posiz,
-    intensity: item.pickupCount / maxPickup,
-    pickupCount: item.pickupCount
-  }));
+  // Mappa solo le ubicazioni che esistono nel magazzino
+  const result: HeatmapData[] = [];
+  
+  data.forEach(item => {
+    if (item.pickupCount <= 0) return;
+    
+    const loc = locationMap.get(item.locationCode);
+    if (!loc) return; // Salta se l'ubicazione non esiste nel magazzino
+    
+    result.push({
+      locationCode: item.locationCode,
+      // Usa le coordinate dalla location esistente
+      x: loc.x,
+      y: loc.y,
+      z: loc.z,
+      intensity: item.pickupCount / maxPickup,
+      pickupCount: item.pickupCount
+    });
+  });
+
+  console.log(`Heatmap: ${result.length} ubicazioni mappate su ${data.length} totali`);
+  return result;
 }
 
 /**

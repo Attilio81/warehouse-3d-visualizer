@@ -28,10 +28,11 @@ export const LocationTooltip: React.FC<LocationTooltipProps> = ({
   const [maxHeight, setMaxHeight] = useState(500);
 
   useEffect(() => {
-    // Calcola posizione e altezza massima disponibile
+    // Calcola posizione ottimale per visibilità completa
     let x = mouseX;
     let y = mouseY;
     const tooltipWidth = 350;
+    const estimatedHeight = 400; // Altezza stimata del tooltip
     const margin = 20;
 
     // Check right edge
@@ -44,14 +45,22 @@ export const LocationTooltip: React.FC<LocationTooltipProps> = ({
       x = margin;
     }
 
-    // Check top edge
-    if (y < margin) {
-      y = margin;
-    }
+    // Calcola spazio disponibile sopra e sotto
+    const spaceBelow = window.innerHeight - mouseY - margin;
+    const spaceAbove = mouseY - margin;
 
-    // Calcola altezza massima disponibile dal punto y fino al fondo dello schermo
-    const availableHeight = window.innerHeight - y - margin;
-    setMaxHeight(Math.max(300, availableHeight));
+    // Se non c'è abbastanza spazio sotto, prova sopra
+    if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
+      // Posiziona sopra il punto di click
+      y = Math.max(margin, mouseY - estimatedHeight);
+      setMaxHeight(Math.min(estimatedHeight, mouseY - margin));
+    } else {
+      // Posiziona sotto (default)
+      if (y < margin) {
+        y = margin;
+      }
+      setMaxHeight(Math.max(300, spaceBelow));
+    }
 
     setPosition({ x, y });
   }, [mouseX, mouseY]);

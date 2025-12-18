@@ -53,8 +53,14 @@ export function App() {
   // Load data from database on startup
   useEffect(() => {
     loadDataFromAPI();
-    loadOptimizationData();
   }, []);
+
+  // Load optimization data AFTER locations are loaded
+  useEffect(() => {
+    if (locations.length > 0) {
+      loadOptimizationData();
+    }
+  }, [locations.length]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -136,10 +142,11 @@ export function App() {
   const loadOptimizationData = async () => {
     try {
       // Carica dati heatmap
-      const heatmapResponse = await fetch(`${API_HEATMAP_URL}?days=30`);
+      const heatmapResponse = await fetch(`${API_HEATMAP_URL}?days=90`);
       if (heatmapResponse.ok) {
         const rawHeatmapData = await heatmapResponse.json();
-        const normalizedHeatmap = normalizeHeatmapData(rawHeatmapData);
+        // Mappa i dati heatmap alle locations esistenti per usare le coordinate corrette
+        const normalizedHeatmap = normalizeHeatmapData(rawHeatmapData, locations);
         setHeatmapData(normalizedHeatmap);
       }
     } catch (err) {

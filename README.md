@@ -2,7 +2,7 @@
 
 Un visualizzatore 3D interattivo per la gestione e ottimizzazione del magazzino con analisi avanzate e suggerimenti intelligenti.
 
-![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19.2.3-61dafb.svg)
 ![Three.js](https://img.shields.io/badge/Three.js-0.182.0-black.svg)
@@ -32,10 +32,11 @@ Un visualizzatore 3D interattivo per la gestione e ottimizzazione del magazzino 
 ### 🚀 Ottimizzazione Logistica (NUOVO!)
 
 #### 1. Heatmap Utilizzo
-- **Visualizzazione 3D** della frequenza di utilizzo ubicazioni
+- **Colorazione diretta dei box** in base alla frequenza di utilizzo
+- **Dati reali** basati su movimenti effettivi (tabella `movmag`)
 - **Scala colori graduale** da blu (poco usato) a rosso (molto usato)
-- **Analisi statistica** con metriche aggregate
-- **Top 10 ubicazioni** più utilizzate
+- **Analisi statistica** con metriche aggregate (ultimi 90 giorni)
+- **Top 10 ubicazioni** più utilizzate con stessa scala colori
 
 #### 2. Suggerimenti Intelligenti
 - **Algoritmo avanzato** per identificare ubicazioni non ottimali
@@ -74,7 +75,7 @@ Un visualizzatore 3D interattivo per la gestione e ottimizzazione del magazzino 
 
 ### Database
 - **Microsoft SQL Server** - Database relazionale
-- Tabelle: `anaubic`, `lotcpro`, `artico`, `egmovimentimag3d`
+- Tabelle: `anaubic`, `lotcpro`, `artico`, `movmag`, `tabcaum`
 
 ## 📋 Prerequisiti
 
@@ -360,8 +361,9 @@ return frequencyScore * 0.5 +  // Modifica peso frequenza
 
 ### La heatmap non mostra dati
 ```bash
-# Assicurati che ci siano movimenti confermati nel database
-# Verifica tabella egmovimentimag3d con confermato = 1
+# Assicurati che ci siano movimenti nella tabella movmag
+# Verifica che mm_ubicaz corrisponda ai codici in anaubic.au_ubicaz
+# Controlla che ci siano movimenti negli ultimi 90 giorni
 ```
 
 ### Performance lente con molte ubicazioni
@@ -405,6 +407,18 @@ CREATE INDEX idx_lotcpro_ubicaz ON lotcpro(lp_ubicaz, lp_codart, lp_esist);
 5. Apri una Pull Request
 
 ## 📝 Changelog
+
+### v1.2.0 (2024-12-18)
+#### ✨ Nuove Funzionalità
+- ✅ **Heatmap basata su movimenti reali** (tabella `movmag` invece di `egmovimentimag3d`)
+- ✅ **Colorazione diretta dei box** invece di layer separato
+- ✅ **Analisi 90 giorni** di storico movimenti per dati più significativi
+- ✅ **Scala colori unificata** tra vista 3D e pannello Top 10
+
+#### 🔧 Miglioramenti Tecnici
+- ✅ Query ottimizzate con JOIN su `movmag` e `tabcaum`
+- ✅ Filtro ubicazioni placeholder (00 00 00)
+- ✅ Mapping coordinate tramite `locationCode` esistenti
 
 ### v1.1.0 (2024-12-17)
 #### ✨ Nuove Funzionalità

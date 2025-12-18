@@ -3,6 +3,7 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Environment, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { LocationData, HeatmapData, PickingPath } from '../types';
+import { getHeatmapColor } from '../utils/heatmapUtils';
 import { HeatmapOverlay } from './HeatmapOverlay';
 import { PickingPathVisualizer } from './PickingPathVisualizer';
 import { FirstPersonControls } from './FirstPersonControls';
@@ -35,7 +36,9 @@ const Racks: React.FC<{
   locations: LocationData[]; 
   onSelect: (id: number, mouseX?: number, mouseY?: number) => void;
   selectedId: number | null;
-}> = ({ locations, onSelect, selectedId }) => {
+  heatmapData?: HeatmapData[];
+  showHeatmap?: boolean;
+}> = ({ locations, onSelect, selectedId, heatmapData = [], showHeatmap = false }) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
 
@@ -58,6 +61,13 @@ const Racks: React.FC<{
     }
   }, [locations]);
 
+  // Crea mappa heatmap per locationCode
+  const heatmapMap = useMemo(() => {
+    const map = new Map<string, number>();
+    heatmapData.forEach(hd => map.set(hd.locationCode, hd.intensity));
+    return map;
+  }, [heatmapData]);
+
   useLayoutEffect(() => {
     if (!meshRef.current || locations.length === 0) return;
     const mesh = meshRef.current;
@@ -68,8 +78,17 @@ const Racks: React.FC<{
         tempColor.set('#FACC15'); // Yellow - Selected
       } else if (loc.id === hoveredId) {
         tempColor.set('#60A5FA'); // Blue - Hovered
+      } else if (showHeatmap) {
+        // Modalità Heatmap: colora in base all'intensità
+        const locCode = loc.locationCode || loc.originalString;
+        const intensity = heatmapMap.get(locCode) || 0;
+        if (intensity > 0) {
+          tempColor.set(getHeatmapColor(intensity));
+        } else {
+          tempColor.set('#1f2937'); // Grigio scuro per nessuna attività
+        }
       } else {
-        // Check for pending movements
+        // Modalità normale
         const hasMovOut = loc.movOut && loc.movOut > 0;
         const hasMovIn = loc.movIn && loc.movIn > 0;
         const hasStock = loc.quantity && loc.quantity > 0;
@@ -92,7 +111,7 @@ const Racks: React.FC<{
     if (mesh.instanceColor) {
       mesh.instanceColor.needsUpdate = true;
     }
-  }, [locations, selectedId, hoveredId]);
+  }, [locations, selectedId, hoveredId, showHeatmap, heatmapMap]);
 
   return (
     <instancedMesh
@@ -392,12 +411,9 @@ export const WarehouseScene = forwardRef<WarehouseController, WarehouseSceneProp
         locations={locations}
         onSelect={(id, mouseX, mouseY) => onSelectLocation(locations.find(l => l.id === id) || null, mouseX, mouseY)}
         selectedId={selectedLocationId}
+        heatmapData={heatmapData}
+        showHeatmap={showHeatmap}
       />
-
-      {/* Heatmap Overlay */}
-      {showHeatmap && heatmapData.length > 0 && (
-        <HeatmapOverlay heatmapData={heatmapData} enabled={showHeatmap} opacity={0.7} />
-      )}
 
       {/* Picking Path Visualizer */}
       {showPickingPath && pickingPath && (

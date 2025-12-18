@@ -14,7 +14,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { OptimalLocationSuggestion, HeatmapData, PickingPath, LocationData } from '../types';
-import { calculateHeatmapStats, getTopLocations } from '../utils/heatmapUtils';
+import { calculateHeatmapStats, getTopLocations, getHeatmapColor } from '../utils/heatmapUtils';
 
 interface OptimizationPanelProps {
   isOpen: boolean;
@@ -274,15 +274,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-8 h-8 rounded flex items-center justify-center font-bold ${
-                              index === 0
-                                ? 'bg-yellow-600 text-white'
-                                : index === 1
-                                ? 'bg-gray-400 text-white'
-                                : index === 2
-                                ? 'bg-orange-600 text-white'
-                                : 'bg-slate-700 text-slate-300'
-                            }`}
+                            className="w-8 h-8 rounded flex items-center justify-center font-bold text-white"
+                            style={{ backgroundColor: getHeatmapColor(location.intensity) }}
                           >
                             {index + 1}
                           </div>

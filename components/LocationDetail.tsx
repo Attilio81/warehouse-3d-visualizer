@@ -41,6 +41,9 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Sezione posizione (collassata di default)
+  const [showPosition, setShowPosition] = useState(false);
+
   // Storico movimenti
   const [showHistory, setShowHistory] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -112,20 +115,35 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
         <span className="text-xl font-mono font-bold text-white">{location.originalString}</span>
       </div>
 
-      <div className="space-y-3">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-400 flex items-center gap-2"><Map size={14} /> Corsia (Aisle)</span>
-          <span className="font-mono text-white">{location.aisle}</span>
+      {/* Sezione Posizione - Toggle collassabile */}
+      <button
+        onClick={() => setShowPosition(!showPosition)}
+        className="w-full flex items-center justify-between text-sm text-slate-400 hover:text-slate-200 transition-colors py-1"
+      >
+        <span className="flex items-center gap-2">
+          <Map size={14} />
+          Posizione
+          <span className="text-xs text-slate-500">({location.aisle}-{location.bay}-{location.level})</span>
+        </span>
+        {showPosition ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+      </button>
+
+      {showPosition && (
+        <div className="space-y-2 pl-6 pb-2 border-l-2 border-slate-700 ml-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-400 flex items-center gap-2"><Map size={14} /> Corsia</span>
+            <span className="font-mono text-white">{location.aisle}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-400 flex items-center gap-2"><Box size={14} /> Posto</span>
+            <span className="font-mono text-white">{location.bay}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-400 flex items-center gap-2"><Layers size={14} /> Livello</span>
+            <span className="font-mono text-white">{location.level}</span>
+          </div>
         </div>
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-400 flex items-center gap-2"><Box size={14} /> Posto (Bay)</span>
-          <span className="font-mono text-white">{location.bay}</span>
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-400 flex items-center gap-2"><Layers size={14} /> Livello (Level)</span>
-          <span className="font-mono text-white">{location.level}</span>
-        </div>
-      </div>
+      )}
 
       {location.productCode && (
         <div className="mt-4 pt-3 border-t border-slate-700 space-y-2">

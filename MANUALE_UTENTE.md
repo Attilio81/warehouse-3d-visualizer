@@ -375,26 +375,32 @@ Nel pannello vengono mostrati tutti i movimenti non ancora confermati:
 
 #### 1. Heatmap Utilizzo
 
-La heatmap mostra visivamente quali ubicazioni sono più utilizzate.
+La heatmap mostra visivamente quali ubicazioni sono più utilizzate basandosi sui **movimenti reali** degli ultimi 90 giorni.
 
 **Attivare la Heatmap:**
-1. Nel pannello Ottimizzazione
-2. Click su **"🔥 Mostra Heatmap"**
-3. Le ubicazioni cambiano colore in base alla frequenza d'uso:
+1. Nella sidebar, sezione "Ottimizzazione Logistica"
+2. Click su **"Mostra Heatmap"**
+3. I **box delle ubicazioni** cambiano colore direttamente in base alla frequenza d'uso:
+   - ⚫ **Grigio scuro**: Nessun movimento
    - 🔵 **Blu**: Poco utilizzate
    - 🟢 **Verde**: Utilizzo medio
    - 🟡 **Giallo**: Utilizzo frequente
    - 🟠 **Arancione**: Utilizzo molto frequente
-   - 🔴 **Rosso**: Utilizzo intensivo
+   - 🔴 **Rosso**: Utilizzo intensivo (massimo movimenti)
 
 **Interpretare la Heatmap:**
-- Zone rosse → prodotti ad alta rotazione
+- Zone rosse → prodotti ad alta rotazione (molti prelievi/carichi)
 - Zone blu → prodotti stoccaggio lungo termine
+- Zone grigie → ubicazioni mai movimentate negli ultimi 90 giorni
 - Considera di spostare prodotti ad alta rotazione vicino alle zone di prelievo
 
+**Scala Colori Unificata:**
+- La stessa scala colori è usata sia nella vista 3D che nel pannello "Top 10 Ubicazioni"
+- Il badge numerico nella lista Top 10 usa lo stesso colore del box 3D
+
 **Disattivare la Heatmap:**
-- Click su **"Nascondi Heatmap"**
-- I colori tornano normali
+- Click nuovamente su **"Mostra Heatmap"**
+- I colori tornano alla visualizzazione normale (verde=piena, grigio=vuota)
 
 #### 2. Suggerimenti Ottimizzazione
 
@@ -682,9 +688,15 @@ Quando si richiede assistenza, includere:
 
 ## 📄 Note sulla Versione
 
-**Versione**: 1.1.0  
-**Ultimo aggiornamento**: 17 Dicembre 2024  
+**Versione**: 1.2.0  
+**Ultimo aggiornamento**: 18 Dicembre 2024  
 **Compatibilità**: Node.js 18+, React 19, SQL Server 2016+
+
+### Novità v1.2.0
+- ✅ **Heatmap basata su movimenti reali** (tabella `movmag`)
+- ✅ **Colorazione diretta dei box** invece di layer separato
+- ✅ **Analisi 90 giorni** di storico per dati significativi
+- ✅ **Scala colori unificata** tra vista 3D e Top 10
 
 ### Novità v1.1.0
 - ✅ Spostamento articoli inline dal pannello Dettagli

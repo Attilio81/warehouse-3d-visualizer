@@ -234,35 +234,47 @@ app.delete('/api/movimenti/:id', async (req, res) => {
   }
 });
 
-// API: Get heatmap data (frequenza utilizzo ubicazioni)
+// API: Get heatmap data (frequenza utilizzo ubicazioni basata su movimenti REALI)
 app.get('/api/optimization/heatmap', async (req, res) => {
   try {
-    const { days = 30 } = req.query;
+    const { days = 90 } = req.query; // Default 90 giorni per avere più dati significativi
     const pool = await sql.connect(dbConfig);
 
-    // Query per ottenere la frequenza di prelievi per ubicazione
+    // Query basata sui movimenti REALI (tabella movmag)
+    // tb_esist: 1 = carico (entrata), altri = scarico (uscita/prelievo)
+    // Contiamo sia entrate che uscite per avere un quadro completo dell'attività
     const result = await pool.request()
       .input('days', sql.Int, days)
       .query(`
-        WITH PickupStats AS (
+        WITH MovimentStats AS (
           SELECT
-            ubicaz_partenza as ubicazione,
-            COUNT(*) as pickup_count
-          FROM egmovimentimag3d
-          WHERE confermato = 1
-            AND data_conferma >= DATEADD(day, -@days, GETDATE())
-          GROUP BY ubicaz_partenza
+            mm_ubicaz as ubicazione,
+            COUNT(*) as total_movements,
+            SUM(CASE WHEN tabcaum.tb_esist = 1 THEN 1 ELSE 0 END) as entrate,
+            SUM(CASE WHEN tabcaum.tb_esist != 1 THEN 1 ELSE 0 END) as uscite,
+            SUM(ABS(mm_quant)) as quantita_totale
+          FROM movmag
+          INNER JOIN tabcaum ON movmag.mm_causale = tabcaum.tb_codcaum
+          WHERE mm_ultagg >= DATEADD(day, -@days, GETDATE())
+            AND mm_ubicaz IS NOT NULL
+            AND LEN(LTRIM(RTRIM(mm_ubicaz))) > 0
+          GROUP BY mm_ubicaz
         )
         SELECT
           anaubic.au_ubicaz as locationCode,
           anaubic.au_scaff,
           anaubic.au_posiz,
           anaubic.au_piano,
-          ISNULL(ps.pickup_count, 0) as pickupCount
+          ISNULL(ms.total_movements, 0) as pickupCount,
+          ISNULL(ms.entrate, 0) as entrate,
+          ISNULL(ms.uscite, 0) as uscite,
+          ISNULL(ms.quantita_totale, 0) as quantitaTotale
         FROM anaubic
-        LEFT JOIN PickupStats ps ON anaubic.au_ubicaz = ps.ubicazione
+        LEFT JOIN MovimentStats ms ON anaubic.au_ubicaz = ms.ubicazione
         WHERE anaubic.au_ubicaz IS NOT NULL
           AND LEN(LTRIM(RTRIM(anaubic.au_ubicaz))) > 0
+          AND anaubic.au_ubicaz != '00 00 00'
+          AND anaubic.au_scaff > 0
       `);
 
     res.json(result.recordset);
@@ -272,35 +284,39 @@ app.get('/api/optimization/heatmap', async (req, res) => {
   }
 });
 
-// API: Get location statistics
+// API: Get location statistics (basato su movimenti REALI)
 app.get('/api/optimization/location-stats', async (req, res) => {
   try {
-    const { days = 30 } = req.query;
+    const { days = 90 } = req.query;
     const pool = await sql.connect(dbConfig);
 
     const result = await pool.request()
       .input('days', sql.Int, days)
       .query(`
-        WITH PickupStats AS (
+        WITH MovimentStats AS (
           SELECT
-            ubicaz_partenza as ubicazione,
+            mm_ubicaz as ubicazione,
             COUNT(*) as frequency,
-            MAX(data_conferma) as last_pickup
-          FROM egmovimentimag3d
-          WHERE confermato = 1
-            AND data_conferma >= DATEADD(day, -@days, GETDATE())
-          GROUP BY ubicaz_partenza
+            MAX(mm_ultagg) as last_movement,
+            SUM(CASE WHEN tabcaum.tb_esist != 1 THEN 1 ELSE 0 END) as uscite
+          FROM movmag
+          INNER JOIN tabcaum ON movmag.mm_causale = tabcaum.tb_codcaum
+          WHERE mm_ultagg >= DATEADD(day, -@days, GETDATE())
+            AND mm_ubicaz IS NOT NULL
+            AND LEN(LTRIM(RTRIM(mm_ubicaz))) > 0
+          GROUP BY mm_ubicaz
         )
         SELECT
           anaubic.au_ubicaz as locationCode,
-          ISNULL(ps.frequency, 0) as pickupFrequency,
-          ps.last_pickup as lastPickupDate,
+          ISNULL(ms.frequency, 0) as pickupFrequency,
+          ISNULL(ms.uscite, 0) as pickupCount,
+          ms.last_movement as lastPickupDate,
           ISNULL(anaubic.au_volume, 0) as totalVolume,
           anaubic.au_scaff,
           anaubic.au_posiz,
           anaubic.au_piano
         FROM anaubic
-        LEFT JOIN PickupStats ps ON anaubic.au_ubicaz = ps.ubicazione
+        LEFT JOIN MovimentStats ms ON anaubic.au_ubicaz = ms.ubicazione
         WHERE anaubic.au_ubicaz IS NOT NULL
           AND LEN(LTRIM(RTRIM(anaubic.au_ubicaz))) > 0
       `);
@@ -312,53 +328,56 @@ app.get('/api/optimization/location-stats', async (req, res) => {
   }
 });
 
-// API: Get optimal location suggestions
+// API: Get optimal location suggestions (basato su movimenti REALI)
 app.get('/api/optimization/suggestions', async (req, res) => {
   try {
-    const { days = 30, minFrequency = 5 } = req.query;
+    const { days = 90, minFrequency = 3 } = req.query;
     const pool = await sql.connect(dbConfig);
 
-    // Query per trovare prodotti ad alta rotazione in ubicazioni non ottimali
+    // Query per trovare prodotti ad alta rotazione basata su movimenti REALI
     const result = await pool.request()
       .input('days', sql.Int, days)
       .input('minFrequency', sql.Int, minFrequency)
       .query(`
-        WITH PickupStats AS (
+        WITH MovimentStats AS (
           SELECT
-            m.ubicaz_partenza,
-            m.lp_codart,
+            mm_ubicaz as ubicazione,
+            mm_codart as codart,
             COUNT(*) as frequency,
-            MAX(m.data_conferma) as last_pickup
-          FROM egmovimentimag3d m
-          WHERE m.confermato = 1
-            AND m.data_conferma >= DATEADD(day, -@days, GETDATE())
-          GROUP BY m.ubicaz_partenza, m.lp_codart
-          HAVING COUNT(*) >= @minFrequency
+            SUM(CASE WHEN tabcaum.tb_esist != 1 THEN 1 ELSE 0 END) as uscite,
+            MAX(mm_ultagg) as last_movement
+          FROM movmag
+          INNER JOIN tabcaum ON movmag.mm_causale = tabcaum.tb_codcaum
+          WHERE mm_ultagg >= DATEADD(day, -@days, GETDATE())
+            AND mm_ubicaz IS NOT NULL
+            AND LEN(LTRIM(RTRIM(mm_ubicaz))) > 0
+          GROUP BY mm_ubicaz, mm_codart
+          HAVING SUM(CASE WHEN tabcaum.tb_esist != 1 THEN 1 ELSE 0 END) >= @minFrequency
         ),
         CurrentLocations AS (
           SELECT
-            ps.*,
+            ms.*,
             anaubic.au_piano,
             anaubic.au_scaff,
             anaubic.au_posiz,
             anaubic.au_volume,
-            artico.ar_volume
-          FROM PickupStats ps
-          INNER JOIN lotcpro ON ps.ubicaz_partenza = lotcpro.lp_ubicaz
-            AND ps.lp_codart = lotcpro.lp_codart
-          INNER JOIN anaubic ON ps.ubicaz_partenza = anaubic.au_ubicaz
-          LEFT JOIN artico ON ps.lp_codart = artico.ar_codart
-          WHERE lotcpro.lp_esist > 0
+            artico.ar_volume,
+            artico.ar_descr
+          FROM MovimentStats ms
+          INNER JOIN anaubic ON ms.ubicazione = anaubic.au_ubicaz
+          LEFT JOIN artico ON ms.codart = artico.ar_codart
         )
         SELECT
-          ubicaz_partenza as currentLocation,
-          lp_codart as productCode,
-          frequency as pickupFrequency,
+          ubicazione as currentLocation,
+          codart as productCode,
+          ar_descr as productDesc,
+          uscite as pickupFrequency,
+          frequency as totalMovements,
           au_piano as currentLevel,
           au_scaff as currentAisle,
           ISNULL(ar_volume, 0) as productVolume
         FROM CurrentLocations
-        ORDER BY frequency DESC
+        ORDER BY uscite DESC
       `);
 
     res.json(result.recordset);
