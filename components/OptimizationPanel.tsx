@@ -24,6 +24,7 @@ interface OptimizationPanelProps {
   pickingPath: PickingPath | null;
   onSuggestionClick?: (suggestion: OptimalLocationSuggestion) => void;
   onHighlightLocation?: (locationCode: string) => void;
+  onCalculatePath?: (locationCodes: string[]) => void;
 }
 
 export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
@@ -33,10 +34,13 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   heatmapData,
   pickingPath,
   onSuggestionClick,
-  onHighlightLocation
+  onHighlightLocation,
+  onCalculatePath
 }) => {
   const [activeTab, setActiveTab] = useState<'suggestions' | 'heatmap' | 'path'>('suggestions');
   const [expandedSuggestion, setExpandedSuggestion] = useState<number | null>(null);
+  const [pathInput, setPathInput] = useState<string>('');
+  const [isCalculating, setIsCalculating] = useState(false);
 
   const heatmapStats = calculateHeatmapStats(heatmapData);
   const topLocations = getTopLocations(heatmapData, 10);
@@ -313,13 +317,45 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           {/* Picking Path Tab */}
           {activeTab === 'path' && (
             <div className="space-y-4">
-              {!pickingPath || pickingPath.locations.length === 0 ? (
-                <div className="text-center py-12">
-                  <Route size={48} className="mx-auto text-slate-600 mb-4" />
-                  <p className="text-slate-400 text-lg">Nessun percorso calcolato</p>
-                  <p className="text-slate-500 text-sm mt-2">
-                    Seleziona più ubicazioni per calcolare il percorso ottimale
+              {/* Input per ubicazioni */}
+              <div className="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+                  <MapPin size={16} />
+                  Inserisci Ubicazioni da Visitare
+                </h3>
+                <textarea
+                  value={pathInput}
+                  onChange={(e) => setPathInput(e.target.value)}
+                  placeholder="Inserisci i codici ubicazione separati da virgola o su righe diverse&#10;Es: 17 03 01, 06 05 01, 16 01 01"
+                  className="w-full bg-slate-900 border border-slate-600 rounded p-3 text-white placeholder-slate-500 text-sm font-mono resize-none"
+                  rows={3}
+                />
+                <div className="flex items-center justify-between mt-3">
+                  <p className="text-xs text-slate-500">
+                    {pathInput.trim() ? `${pathInput.split(/[,\n]+/).filter(s => s.trim()).length} ubicazioni` : 'Nessuna ubicazione'}
                   </p>
+                  <button
+                    onClick={() => {
+                      const codes = pathInput.split(/[,\n]+/).map(s => s.trim()).filter(s => s.length > 0);
+                      if (codes.length >= 2 && onCalculatePath) {
+                        setIsCalculating(true);
+                        onCalculatePath(codes);
+                        setTimeout(() => setIsCalculating(false), 500);
+                      }
+                    }}
+                    disabled={pathInput.split(/[,\n]+/).filter(s => s.trim()).length < 2 || isCalculating}
+                    className="bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 text-white px-4 py-2 rounded font-medium transition-colors flex items-center gap-2"
+                  >
+                    {isCalculating ? <Loader2 size={16} className="animate-spin" /> : <Route size={16} />}
+                    Calcola Percorso
+                  </button>
+                </div>
+              </div>
+
+              {!pickingPath || pickingPath.locations.length === 0 ? (
+                <div className="text-center py-8">
+                  <Route size={48} className="mx-auto text-slate-600 mb-4" />
+                  <p className="text-slate-400">Inserisci almeno 2 ubicazioni e clicca "Calcola Percorso"</p>
                 </div>
               ) : (
                 <>

@@ -324,6 +324,7 @@ export function App() {
         pickingPath={pickingPath}
         onSuggestionClick={handleSuggestionClick}
         onHighlightLocation={handleHighlightLocation}
+        onCalculatePath={handleCalculatePickingPath}
       />
 
       <div className="flex-1 h-full bg-gray-900 relative">
