@@ -2,6 +2,11 @@
 nul
 NUL
 
+# Environment variables
+.env
+.env.local
+.env.*.local
+
 # Logs
 logs
 *.log
