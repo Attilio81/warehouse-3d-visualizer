@@ -100,7 +100,6 @@ app.get('/api/warehouse-data', async (req, res) => {
     res.json(result.recordset);
 
   } catch (err) {
-    console.error('SQL Error:', err);
     res.status(500).json({ error: 'Failed to fetch data', details: err.message });
   }
 });
@@ -129,7 +128,6 @@ app.get('/api/movimenti', async (req, res) => {
     `);
     res.json(result.recordset);
   } catch (err) {
-    console.error('SQL Error:', err);
     res.status(500).json({ error: 'Failed to fetch movements', details: err.message });
   }
 });
@@ -174,7 +172,6 @@ app.post('/api/movimenti', async (req, res) => {
     res.status(201).json({ success: true, id: newId, message: 'Movimento creato con successo' });
 
   } catch (err) {
-    console.error('SQL Error:', err);
     res.status(500).json({ error: 'Failed to create movement', details: err.message });
   }
 });
@@ -202,7 +199,6 @@ app.put('/api/movimenti/:id/conferma', async (req, res) => {
     res.json({ success: true, message: 'Movimento confermato' });
 
   } catch (err) {
-    console.error('SQL Error:', err);
     res.status(500).json({ error: 'Failed to confirm movement', details: err.message });
   }
 });
@@ -229,7 +225,6 @@ app.delete('/api/movimenti/:id', async (req, res) => {
     res.json({ success: true, message: 'Movimento eliminato' });
 
   } catch (err) {
-    console.error('SQL Error:', err);
     res.status(500).json({ error: 'Failed to delete movement', details: err.message });
   }
 });
@@ -279,7 +274,6 @@ app.get('/api/optimization/heatmap', async (req, res) => {
 
     res.json(result.recordset);
   } catch (err) {
-    console.error('SQL Error:', err);
     res.status(500).json({ error: 'Failed to fetch heatmap data', details: err.message });
   }
 });
@@ -323,7 +317,6 @@ app.get('/api/optimization/location-stats', async (req, res) => {
 
     res.json(result.recordset);
   } catch (err) {
-    console.error('SQL Error:', err);
     res.status(500).json({ error: 'Failed to fetch location stats', details: err.message });
   }
 });
@@ -382,7 +375,6 @@ app.get('/api/optimization/suggestions', async (req, res) => {
 
     res.json(result.recordset);
   } catch (err) {
-    console.error('SQL Error:', err);
     res.status(500).json({ error: 'Failed to fetch suggestions', details: err.message });
   }
 });
@@ -413,7 +405,6 @@ app.post('/api/optimization/picking-path', async (req, res) => {
 
     res.json(result.recordset);
   } catch (err) {
-    console.error('SQL Error:', err);
     res.status(500).json({ error: 'Failed to calculate picking path', details: err.message });
   }
 });
@@ -430,7 +421,6 @@ app.get('/api/debug/barcode/:codart', async (req, res) => {
       `);
     res.json(result.recordset);
   } catch (err) {
-    console.error('SQL Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -450,7 +440,6 @@ app.get('/api/debug/stock/:codart', async (req, res) => {
       `);
     res.json(result.recordset);
   } catch (err) {
-    console.error('SQL Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -492,7 +481,6 @@ app.get('/api/movimenti/storico/:ubicazione', async (req, res) => {
 
     res.json(movements);
   } catch (err) {
-    console.error('SQL Error:', err);
     res.status(500).json({ error: 'Failed to fetch movement history', details: err.message });
   }
 });
@@ -533,11 +521,10 @@ app.get('/api/movimenti/storico-articolo/:codart', async (req, res) => {
 
     res.json(movements);
   } catch (err) {
-    console.error('SQL Error:', err);
     res.status(500).json({ error: 'Failed to fetch article movement history', details: err.message });
   }
 });
 
 app.listen(port, () => {
-  console.log(`Backend server listening at http://localhost:${port}`);
+  // Server started successfully
 });

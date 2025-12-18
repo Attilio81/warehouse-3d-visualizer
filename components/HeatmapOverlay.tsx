@@ -34,10 +34,9 @@ export const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({
   // Filtra solo ubicazioni con attività e prepara i dati
   const sphereData = useMemo(() => {
     if (!enabled) return [];
-    
+
     const active = heatmapData.filter(d => d.intensity > 0);
-    console.log('Heatmap: rendering', active.length, 'locations');
-    
+
     return active.map(d => ({
       key: d.locationCode,
       position: [d.x, d.y + 0.3, d.z] as [number, number, number],

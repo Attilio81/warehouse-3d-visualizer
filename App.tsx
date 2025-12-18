@@ -133,7 +133,6 @@ export function App() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Errore sconosciuto';
       setError(`Errore nel caricamento dei dati: ${errorMessage}`);
-      console.error('Errore caricamento dati:', err);
     } finally {
       setIsLoading(false);
     }
@@ -150,7 +149,7 @@ export function App() {
         setHeatmapData(normalizedHeatmap);
       }
     } catch (err) {
-      console.error('Errore caricamento dati ottimizzazione:', err);
+      // Silently fail optimization data loading
     }
   };
 

@@ -32,7 +32,6 @@ export const MovementsPanel: React.FC<MovementsPanelProps> = ({ isOpen, onClose 
       setMovements(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore nel caricamento');
-      console.error('Error loading movements:', err);
     } finally {
       setIsLoading(false);
     }

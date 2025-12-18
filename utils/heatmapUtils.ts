@@ -51,7 +51,6 @@ export function normalizeHeatmapData(
     });
   });
 
-  console.log(`Heatmap: ${result.length} ubicazioni mappate su ${data.length} totali`);
   return result;
 }
 

@@ -75,14 +75,6 @@ export const parseSQLData = (data: SQLLocationData[]): { locations: LocationData
   let maxLevel = 0;
   let warningCount = 0;
 
-  // Debug: log first 5 rows to see lp_esist values
-  if (data.length > 0) {
-    console.log('DEBUG - First 5 rows lp_esist values:');
-    data.slice(0, 5).forEach((row, i) => {
-      console.log(`  Row ${i} (${row.au_ubicaz}): lp_esist =`, row.lp_esist, `(type: ${typeof row.lp_esist})`);
-    });
-  }
-
   data.forEach((row, index) => {
     // Map SQL fields to 3D coordinates
     // au_scaff -> aisle
@@ -102,14 +94,6 @@ export const parseSQLData = (data: SQLLocationData[]): { locations: LocationData
           if (isNaN(aisle)) aisle = parseInt(parts[0], 10);
           if (isNaN(bay)) bay = parseInt(parts[1], 10);
           if (isNaN(level)) level = parseInt(parts[2], 10);
-
-          if (warningCount < 5) {
-            console.warn(`Parsed coordinates from au_ubicaz for "${row.au_ubicaz}": scaff=${aisle}, posiz=${bay}, piano=${level}`);
-            warningCount++;
-            if (warningCount === 5) {
-              console.warn('... (suppressing further parsing warnings)');
-            }
-          }
         }
       }
     }
@@ -168,14 +152,6 @@ export const parseSQLData = (data: SQLLocationData[]): { locations: LocationData
       movOut: movOut
     });
   });
-
-  console.log(`Parsed ${locations.length} locations from database (received ${data.length} rows from API)`);
-  console.log(`Max coordinates: Aisle=${maxAisle}, Bay=${maxBay}, Level=${maxLevel}`);
-
-  // Debug: count locations with and without stock
-  const withStock = locations.filter(l => l.quantity && l.quantity > 0).length;
-  const withoutStock = locations.filter(l => !l.quantity || l.quantity === 0).length;
-  console.log(`Locations with stock: ${withStock}, without stock: ${withoutStock}`);
 
   return {
     locations,
