@@ -236,55 +236,59 @@ interface WarehouseFloorProps {
   width?: number;
   depth?: number;
   gridSize?: number;
+  centerX?: number;
+  centerZ?: number;
 }
 
 export const WarehouseFloor: React.FC<WarehouseFloorProps> = ({
   width = 100,
   depth = 100,
-  gridSize = 2
+  gridSize = 2,
+  centerX = 0,
+  centerZ = 0
 }) => {
   const gridTexture = useMemo(() => {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 512;
     const ctx = canvas.getContext('2d')!;
-    
-    // Base color
+
+    // Base color - industrial concrete look
     ctx.fillStyle = '#1a2744';
     ctx.fillRect(0, 0, 512, 512);
-    
+
     // Grid lines
     ctx.strokeStyle = '#2a3a5a';
     ctx.lineWidth = 2;
-    
+
     const step = 512 / 8;
     for (let i = 0; i <= 8; i++) {
       ctx.beginPath();
       ctx.moveTo(i * step, 0);
       ctx.lineTo(i * step, 512);
       ctx.stroke();
-      
+
       ctx.beginPath();
       ctx.moveTo(0, i * step);
       ctx.lineTo(512, i * step);
       ctx.stroke();
     }
-    
+
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(width / gridSize, depth / gridSize);
-    
+
     return texture;
   }, [width, depth, gridSize]);
 
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[centerX, -0.5, centerZ]} receiveShadow>
       <planeGeometry args={[width, depth]} />
-      <meshStandardMaterial 
+      <meshStandardMaterial
         map={gridTexture}
-        roughness={0.8}
-        metalness={0.2}
+        roughness={0.85}
+        metalness={0.1}
       />
     </mesh>
   );

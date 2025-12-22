@@ -1,6 +1,7 @@
 import React, { useRef, useLayoutEffect, useState, useEffect, useMemo, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Environment, Html } from '@react-three/drei';
+import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { LocationData, HeatmapData, PickingPath } from '../types';
 import { getHeatmapColor } from '../utils/heatmapUtils';
@@ -32,8 +33,8 @@ interface WarehouseSceneProps {
 const tempObject = new THREE.Object3D();
 const tempColor = new THREE.Color();
 
-const Racks: React.FC<{ 
-  locations: LocationData[]; 
+const Racks: React.FC<{
+  locations: LocationData[];
   onSelect: (id: number, mouseX?: number, mouseY?: number) => void;
   selectedId: number | null;
   heatmapData?: HeatmapData[];
@@ -46,7 +47,7 @@ const Racks: React.FC<{
     if (!meshRef.current || locations.length === 0) return;
 
     const mesh = meshRef.current;
-    
+
     for (let i = 0; i < locations.length; i++) {
       const loc = locations[i];
       tempObject.position.set(loc.x, loc.y, loc.z);
@@ -55,7 +56,7 @@ const Racks: React.FC<{
     }
 
     mesh.instanceMatrix.needsUpdate = true;
-    
+
     if (mesh.geometry) {
       mesh.geometry.computeBoundingSphere();
     }
@@ -74,9 +75,12 @@ const Racks: React.FC<{
 
     for (let i = 0; i < locations.length; i++) {
       const loc = locations[i];
-      if (loc.id === selectedId) {
-        tempColor.set('#FACC15'); // Yellow - Selected
-      } else if (loc.id === hoveredId) {
+      const isSelected = loc.id === selectedId;
+      const isHovered = loc.id === hoveredId;
+
+      if (isSelected) {
+        tempColor.set('#FACC15'); // Yellow - Selected (will glow via emissive)
+      } else if (isHovered) {
         tempColor.set('#60A5FA'); // Blue - Hovered
       } else if (showHeatmap) {
         // Modalità Heatmap: colora in base all'intensità
@@ -117,6 +121,8 @@ const Racks: React.FC<{
     <instancedMesh
       ref={meshRef}
       args={[undefined, undefined, locations.length]}
+      castShadow
+      receiveShadow
       onClick={(e) => {
         e.stopPropagation();
         if (e.instanceId !== undefined && locations[e.instanceId]) {
@@ -142,7 +148,7 @@ const Racks: React.FC<{
 const useWarehouseCenter = (locations: LocationData[]) => {
   return useMemo(() => {
     if (locations.length === 0) return { x: 0, y: 0, z: 0 };
-    
+
     let minX = Infinity, maxX = -Infinity;
     let minY = Infinity, maxY = -Infinity;
     let minZ = Infinity, maxZ = -Infinity;
@@ -160,6 +166,10 @@ const useWarehouseCenter = (locations: LocationData[]) => {
       x: (minX + maxX) / 2,
       y: (minY + maxY) / 2,
       z: (minZ + maxZ) / 2,
+      minX,
+      maxX,
+      minZ,
+      maxZ,
       maxDim: Math.max(maxX - minX, maxY - minY, maxZ - minZ)
     };
   }, [locations]);
@@ -193,7 +203,7 @@ const CameraController: React.FC<{ locations: LocationData[] }> = ({ locations }
 const OrbitTargetHandler: React.FC = () => {
   const { camera, controls, raycaster, scene } = useThree();
   const pointerVec = useMemo(() => new THREE.Vector2(), []);
-  
+
   useEffect(() => {
     const canvas = document.querySelector('canvas');
     if (!canvas) return;
@@ -206,15 +216,15 @@ const OrbitTargetHandler: React.FC = () => {
       const rect = canvas.getBoundingClientRect();
       pointerVec.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       pointerVec.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-      
+
       raycaster.setFromCamera(pointerVec, camera);
-      
+
       // Find intersections with all meshes
       const intersects = raycaster.intersectObjects(scene.children, true);
-      
+
       if (intersects.length > 0) {
         const point = intersects[0].point;
-        
+
         // Animate to new target
         const startTarget = ctrl.target.clone();
         const endTarget = point.clone();
@@ -225,15 +235,15 @@ const OrbitTargetHandler: React.FC = () => {
           const elapsed = Date.now() - startTime;
           const progress = Math.min(elapsed / duration, 1);
           const eased = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-          
+
           ctrl.target.lerpVectors(startTarget, endTarget, eased);
           ctrl.update();
-          
+
           if (progress < 1) {
             requestAnimationFrame(animate);
           }
         };
-        
+
         animate();
       }
     };
@@ -248,7 +258,7 @@ const OrbitTargetHandler: React.FC = () => {
 // Animated camera controller with smooth transitions
 const SceneController = forwardRef<WarehouseController, {}>((_, ref) => {
   const { camera, controls } = useThree();
-  
+
   // Animation state
   const animationRef = useRef<{
     isAnimating: boolean;
@@ -287,7 +297,7 @@ const SceneController = forwardRef<WarehouseController, {}>((_, ref) => {
 
     // Interpolate camera position
     camera.position.lerpVectors(anim.startPos, anim.endPos, easedProgress);
-    
+
     // Interpolate target
     ctrl.target.lerpVectors(anim.startTarget, anim.endTarget, easedProgress);
     ctrl.update();
@@ -373,8 +383,31 @@ export const WarehouseScene = forwardRef<WarehouseController, WarehouseSceneProp
 }, ref) => {
   const dataKey = useMemo(() => `racks-${locations.length}`, [locations.length]);
 
+  // Calculate dynamic floor bounds based on locations
+  const floorBounds = useMemo(() => {
+    if (locations.length === 0) return { x: 0, z: 0, width: 50, depth: 50 };
+
+    let minX = Infinity, maxX = -Infinity;
+    let minZ = Infinity, maxZ = -Infinity;
+
+    for (const loc of locations) {
+      if (loc.x < minX) minX = loc.x;
+      if (loc.x > maxX) maxX = loc.x;
+      if (loc.z < minZ) minZ = loc.z;
+      if (loc.z > maxZ) maxZ = loc.z;
+    }
+
+    const padding = 5; // Add some padding around the locations
+    return {
+      x: (minX + maxX) / 2,
+      z: (minZ + maxZ) / 2,
+      width: (maxX - minX) + padding * 2,
+      depth: (maxZ - minZ) + padding * 2
+    };
+  }, [locations]);
+
   return (
-    <Canvas>
+    <Canvas shadows gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}>
       <PerspectiveCamera makeDefault position={[50, 50, 50]} fov={50} far={10000} />
 
       {!fpsMode ? (
@@ -395,16 +428,51 @@ export const WarehouseScene = forwardRef<WarehouseController, WarehouseSceneProp
       <SceneController ref={ref} />
       {!fpsMode && <OrbitTargetHandler />}
 
-      <ambientLight intensity={0.4} />
-      <directionalLight 
-        position={[100, 200, 100]} 
-        intensity={1.5} 
-        castShadow 
+      {/* Enhanced Lighting Setup */}
+      <ambientLight intensity={0.3} color="#b8c4d4" />
+
+      {/* Main directional light (sun) with shadows */}
+      <directionalLight
+        position={[80, 150, 80]}
+        intensity={2}
+        castShadow
         shadow-mapSize={[2048, 2048]}
+        shadow-camera-far={500}
+        shadow-camera-left={-100}
+        shadow-camera-right={100}
+        shadow-camera-top={100}
+        shadow-camera-bottom={-100}
+        shadow-bias={-0.0001}
+        color="#fff8f0"
       />
-      <directionalLight position={[-50, 100, -50]} intensity={0.3} />
-      <pointLight position={[0, 50, 0]} intensity={0.5} color="#fff5e6" />
+
+      {/* Fill light from opposite side */}
+      <directionalLight
+        position={[-60, 80, -60]}
+        intensity={0.5}
+        color="#e8f0ff"
+      />
+
+      {/* Overhead warehouse lights */}
+      <pointLight position={[0, 40, 0]} intensity={0.8} color="#fff5e6" distance={120} decay={2} />
+      <pointLight position={[30, 40, 30]} intensity={0.4} color="#fff5e6" distance={80} decay={2} />
+      <pointLight position={[-30, 40, -30]} intensity={0.4} color="#fff5e6" distance={80} decay={2} />
+
+      {/* Rim light for depth */}
+      <directionalLight position={[0, 20, -100]} intensity={0.3} color="#a0c4ff" />
+
       <Environment preset="warehouse" />
+
+      {/* Post-processing effects */}
+      <EffectComposer>
+        <Bloom
+          luminanceThreshold={0.6}
+          luminanceSmoothing={0.9}
+          intensity={0.4}
+          radius={0.8}
+        />
+        <Vignette eskil={false} offset={0.1} darkness={0.3} />
+      </EffectComposer>
 
       <Racks
         key={dataKey}
@@ -423,8 +491,14 @@ export const WarehouseScene = forwardRef<WarehouseController, WarehouseSceneProp
       {/* Aisle Labels */}
       <AisleLabels locations={locations} visible={showAisleLabels} />
 
-      {/* Warehouse Floor with grid pattern */}
-      <WarehouseFloor width={200} depth={200} gridSize={4} />
+      {/* Dynamic Warehouse Floor - sized to location bounds */}
+      <WarehouseFloor
+        width={floorBounds.width}
+        depth={floorBounds.depth}
+        gridSize={4}
+        centerX={floorBounds.x}
+        centerZ={floorBounds.z}
+      />
 
       {/* Decorative Pallets near shipping zone */}
       <Pallet position={[3, 0, -3]} hasBoxes={true} />

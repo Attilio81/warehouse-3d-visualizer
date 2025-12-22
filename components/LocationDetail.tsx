@@ -26,8 +26,8 @@ interface LocationDetailProps {
   selectedDestination?: string | null;
 }
 
-export const LocationDetail: React.FC<LocationDetailProps> = ({ 
-  location, 
+export const LocationDetail: React.FC<LocationDetailProps> = ({
+  location,
   showCoordinates = true,
   onMoveArticle,
   onStartSelectDestination,
@@ -60,18 +60,19 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
   // Carica storico movimenti
   const loadHistory = async () => {
     if (historyLoading) return;
-    
+
     setHistoryLoading(true);
     setHistoryError(null);
-    
+
     try {
       const locationCode = location.locationCode || location.originalString;
-      const response = await fetch(`http://localhost:4000/api/movimenti/storico/${encodeURIComponent(locationCode)}?limit=20`);
-      
+      const apiBase = `http://${window.location.hostname}:4000`;
+      const response = await fetch(`${apiBase}/api/movimenti/storico/${encodeURIComponent(locationCode)}?limit=20`);
+
       if (!response.ok) {
         throw new Error('Errore nel caricamento dello storico');
       }
-      
+
       const data = await response.json();
       setMovementHistory(data);
     } catch (err) {
@@ -218,11 +219,10 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
                 {movementHistory.map((mov, idx) => (
                   <div
                     key={idx}
-                    className={`p-2 rounded text-xs border ${
-                      mov.tipo === 'entrata'
+                    className={`p-2 rounded text-xs border ${mov.tipo === 'entrata'
                         ? 'bg-green-900/20 border-green-700/50'
                         : 'bg-red-900/20 border-red-700/50'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1">
@@ -241,9 +241,8 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-300 font-mono">{mov.codiceArticolo}</span>
-                      <span className={`font-bold ${
-                        mov.tipo === 'entrata' ? 'text-green-400' : 'text-red-400'
-                      }`}>
+                      <span className={`font-bold ${mov.tipo === 'entrata' ? 'text-green-400' : 'text-red-400'
+                        }`}>
                         {mov.tipo === 'entrata' ? '+' : '-'}{mov.quantita}
                       </span>
                     </div>
@@ -328,11 +327,10 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
                       type="button"
                       onClick={onStartSelectDestination}
                       disabled={isSubmitting}
-                      className={`px-3 py-2 rounded border transition-colors flex items-center gap-1 ${
-                        isSelectingDestination
+                      className={`px-3 py-2 rounded border transition-colors flex items-center gap-1 ${isSelectingDestination
                           ? 'bg-blue-600 border-blue-400 text-white animate-pulse'
                           : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
-                      }`}
+                        }`}
                       title="Seleziona sulla mappa"
                     >
                       <MousePointer2 size={16} />
@@ -349,11 +347,10 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
               <button
                 type="submit"
                 disabled={isSubmitting || !destinationCode.trim() || quantity <= 0}
-                className={`w-full py-2 px-3 rounded font-medium text-sm flex items-center justify-center gap-2 transition-colors ${
-                  isSubmitting || !destinationCode.trim() || quantity <= 0
+                className={`w-full py-2 px-3 rounded font-medium text-sm flex items-center justify-center gap-2 transition-colors ${isSubmitting || !destinationCode.trim() || quantity <= 0
                     ? 'bg-gray-600 cursor-not-allowed text-gray-400'
                     : 'bg-green-600 hover:bg-green-500 text-white'
-                }`}
+                  }`}
               >
                 {isSubmitting ? (
                   <>

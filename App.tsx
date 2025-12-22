@@ -10,10 +10,12 @@ import { LocationData, Stats, SQLLocationData, HeatmapData, OptimalLocationSugge
 import { normalizeHeatmapData } from './utils/heatmapUtils';
 import { generateOptimizationSuggestions, calculateOptimalPickingPath } from './utils/optimization';
 
-const API_URL = 'http://localhost:4000/api/warehouse-data';
-const API_MOVEMENTS_URL = 'http://localhost:4000/api/movimenti';
-const API_HEATMAP_URL = 'http://localhost:4000/api/optimization/heatmap';
-const API_SUGGESTIONS_URL = 'http://localhost:4000/api/optimization/suggestions';
+// Dynamic API base URL - uses the same hostname as the frontend but port 4000
+const API_BASE = `http://${window.location.hostname}:4000`;
+const API_URL = `${API_BASE}/api/warehouse-data`;
+const API_MOVEMENTS_URL = `${API_BASE}/api/movimenti`;
+const API_HEATMAP_URL = `${API_BASE}/api/optimization/heatmap`;
+const API_SUGGESTIONS_URL = `${API_BASE}/api/optimization/suggestions`;
 
 export function App() {
   const [locations, setLocations] = useState<LocationData[]>([]);
@@ -45,8 +47,8 @@ export function App() {
   const warehouseRef = useRef<WarehouseController>(null);
 
   // Get available levels for filter (memoized for use in keyboard shortcuts)
-  const availableLevels = useMemo(() => 
-    [...new Set(locations.map(loc => loc.level))].sort((a, b) => a - b), 
+  const availableLevels = useMemo(() =>
+    [...new Set(locations.map(loc => loc.level))].sort((a, b) => a - b),
     [locations]
   );
 
@@ -268,7 +270,7 @@ export function App() {
   const filteredLocations = locations.filter(loc => {
     // Level filter
     if (levelFilter !== null && loc.level !== levelFilter) return false;
-    
+
     // Occupancy filter
     if (filter === 'all') return true;
     if (filter === 'full') return loc.quantity > 0;
@@ -415,7 +417,7 @@ export function App() {
             }}
             onMoveArticle={async (destinationCode, quantity) => {
               if (!selectedLocation.productCode) throw new Error('Nessun articolo da spostare');
-              
+
               await handleCreateMovement({
                 codditt: 'VITC', // TODO: Get from location data
                 lp_codart: selectedLocation.productCode,
@@ -426,7 +428,7 @@ export function App() {
                 utente: 'WEB3D',
                 note: 'Movimento da visualizzatore 3D'
               });
-              
+
               // Chiudi il tooltip e resetta stato selezione
               setSelectedLocationId(null);
               setTooltipPosition(null);

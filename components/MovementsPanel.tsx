@@ -7,7 +7,9 @@ interface MovementsPanelProps {
   onClose: () => void;
 }
 
-const API_MOVEMENTS_URL = 'http://localhost:4000/api/movimenti';
+// Dynamic API base URL
+const API_BASE = `http://${window.location.hostname}:4000`;
+const API_MOVEMENTS_URL = `${API_BASE}/api/movimenti`;
 
 export const MovementsPanel: React.FC<MovementsPanelProps> = ({ isOpen, onClose }) => {
   const [movements, setMovements] = useState<Movement[]>([]);
