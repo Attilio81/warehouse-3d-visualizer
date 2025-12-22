@@ -29,6 +29,15 @@ Un visualizzatore 3D interattivo per la gestione e ottimizzazione del magazzino 
 - **Conferma/Eliminazione** movimenti
 - **Validazione automatica** delle operazioni
 
+### 🤖 Assistente AI (NUOVO!)
+- **ChatBot intelligente** con AI Claude 3.5 Haiku
+- **Ricerca in linguaggio naturale**: "Dove si trova l'articolo XYZ?"
+- **Suggerimenti automatici**: "Quali ubicazioni dovrei ottimizzare?"
+- **Analisi dati**: "Mostrami le ubicazioni più utilizzate"
+- **Function calling**: l'AI interroga il database in tempo reale
+- **Contesto conversazionale**: mantiene memoria della conversazione
+- **Floating button**: accessibile da qualsiasi schermata
+
 ### 🚀 Ottimizzazione Logistica (NUOVO!)
 
 #### 1. Heatmap Utilizzo
@@ -97,16 +106,26 @@ cd warehouse-3d-visualizer
 npm install
 ```
 
-### 3. Configurazione Database
+### 3. Configurazione
 
 Crea un file `.env` nella root del progetto:
 
 ```env
+# Database
 DB_USER=tuo_username
 DB_PASSWORD=tua_password
 DB_SERVER=localhost
 DB_DATABASE=nome_database
+
+# AI ChatBot (opzionale)
+ANTHROPIC_API_KEY=sk-ant-...
 ```
+
+**Nota ChatBot AI**:
+- Il chatbot è opzionale. Senza chiave API, l'app funziona normalmente ma il chatbot non sarà disponibile
+- Ottieni la tua chiave gratuita su: https://console.anthropic.com/
+- Claude 3.5 Haiku costa ~$0.001 per conversazione (molto economico!)
+- Essendo in rete locale, i dati non escono dalla tua infrastruttura
 
 ### 4. Struttura Database
 
@@ -235,6 +254,38 @@ Apri il browser su: `http://localhost:3000`
    - Clicca l'icona 🖱️ per **selezionare sulla mappa** con un click
 4. Clicca **"Crea Movimento"**
 
+### 🤖 Utilizzo Assistente AI
+
+#### Aprire il ChatBot
+1. Clicca il pulsante **blu con icona chat** in basso a destra
+2. Si apre la finestra chat con suggerimenti rapidi
+
+#### Esempi di Domande
+**Ricerca:**
+- "Dove si trova l'articolo ABC123?"
+- "Cerca l'ubicazione A01 02 03"
+- "C'è giacenza di XYZ nel magazzino?"
+
+**Analisi:**
+- "Quali sono le ubicazioni più utilizzate?"
+- "Mostrami le statistiche degli ultimi 30 giorni"
+- "Quante ubicazioni sono piene?"
+
+**Ottimizzazione:**
+- "Suggerisci miglioramenti per il magazzino"
+- "Quali articoli dovrei spostare?"
+- "Analizza l'efficienza del picking"
+
+**Conversazione:**
+- L'AI mantiene il contesto: puoi fare domande di follow-up
+- Esempio: "Mostrami le top 5 ubicazioni" → "E quanti prelievi ha la prima?"
+
+#### Pulsanti Rapidi
+- **📊 Top ubicazioni**: Mostra subito le più utilizzate
+- **💡 Ottimizzazioni**: Suggerimenti immediati
+- **🗑️ Cancella chat**: Reset conversazione
+- **➖ Minimizza**: Chiude la chat (riapri con il floating button)
+
 ### 🎯 Ottimizzazione Logistica
 
 #### Visualizzare la Heatmap
@@ -286,6 +337,19 @@ GET  /api/optimization/heatmap              # Dati heatmap utilizzo
 GET  /api/optimization/location-stats       # Statistiche ubicazioni
 GET  /api/optimization/suggestions          # Suggerimenti ottimizzazione
 POST /api/optimization/picking-path         # Calcola percorso ottimale
+```
+
+### AI ChatBot
+```
+POST /api/chat                              # Conversazione con AI
+  Body: {
+    message: string,              # Messaggio utente
+    conversationHistory: []       # Storico conversazione
+  }
+  Response: {
+    response: string,             # Risposta AI
+    conversationId: string        # ID conversazione
+  }
 ```
 
 ### Parametri Query
@@ -407,6 +471,30 @@ CREATE INDEX idx_lotcpro_ubicaz ON lotcpro(lp_ubicaz, lp_codart, lp_esist);
 5. Apri una Pull Request
 
 ## 📝 Changelog
+
+### v1.3.0 (2024-12-22) - AI ChatBot Release 🤖
+#### ✨ Nuove Funzionalità
+- ✅ **Assistente AI integrato** con Claude 3.5 Haiku
+- ✅ **Function calling**: l'AI interroga il database in tempo reale
+- ✅ **Ricerca in linguaggio naturale**: query semplici e intuitive
+- ✅ **Contesto conversazionale**: mantiene memoria della conversazione
+- ✅ **Floating button UI**: accessibile da qualsiasi schermata
+- ✅ **3 Tools AI**: search_location, get_optimization_suggestions, get_heatmap_data
+- ✅ **Pulsanti rapidi**: azioni predefinite per query comuni
+
+#### 🔧 Miglioramenti Tecnici
+- ✅ Nuovo endpoint `/api/chat` con validazione robusta
+- ✅ Helper functions per interrogazione database interna
+- ✅ Error handling specifico per API Anthropic
+- ✅ Rate limiting e validazione input
+- ✅ Componente ChatBot.tsx con UI moderna
+- ✅ Dipendenza @anthropic-ai/sdk aggiunta
+
+#### 📚 Documentazione
+- ✅ Sezione README dedicata al chatbot
+- ✅ Esempi di domande e utilizzo
+- ✅ Guida configurazione API key
+- ✅ Stima costi e privacy (rete locale)
 
 ### v1.2.0 (2024-12-18)
 #### ✨ Nuove Funzionalità

@@ -5,6 +5,7 @@ import { MovementModal } from './components/MovementModal';
 import { MovementsPanel } from './components/MovementsPanel';
 import { OptimizationPanel } from './components/OptimizationPanel';
 import { LocationTooltip } from './components/LocationTooltip';
+import { ChatBot } from './components/ChatBot';
 import { parseSQLData } from './utils/parser';
 import { LocationData, Stats, SQLLocationData, HeatmapData, OptimalLocationSuggestion, PickingPath } from './types';
 import { normalizeHeatmapData } from './utils/heatmapUtils';
@@ -444,6 +445,9 @@ export function App() {
           />
         );
       })()}
+
+      {/* AI ChatBot - Floating Button */}
+      <ChatBot />
     </div>
   );
 }
