@@ -2,11 +2,17 @@ import express from 'express';
 import sql from 'mssql';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import Anthropic from '@anthropic-ai/sdk';
 
 dotenv.config();
 
 const app = express();
 const port = 4000;
+
+// Initialize Anthropic client
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
 
 app.use(cors());
 app.use(express.json());
@@ -535,6 +541,314 @@ app.get('/api/movimenti/storico-articolo/:codart', async (req, res) => {
   } catch (err) {
     console.error('SQL Error:', err);
     res.status(500).json({ error: 'Failed to fetch article movement history', details: err.message });
+  }
+});
+
+// ============================================
+// CHATBOT AI ENDPOINT
+// ============================================
+
+// Helper function: Search location by code, article, or barcode
+async function searchLocationInternal(query) {
+  try {
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request()
+      .input('query', sql.VarChar, `%${query}%`)
+      .query(`
+        SELECT TOP 5
+          anaubic.au_ubicaz AS ubicazione,
+          anaubic.au_scaff AS scaffale,
+          anaubic.au_posiz AS posizione,
+          anaubic.au_piano AS piano,
+          ISNULL(stock.lp_codart, '') AS codiceArticolo,
+          ISNULL(stock.lp_esist, 0) AS quantita,
+          ISNULL(stock.ar_descr, '') AS descrizioneArticolo,
+          ISNULL(stock.bc_code, '') AS barcode
+        FROM anaubic
+        LEFT JOIN (
+          SELECT lp_ubicaz, lp_codart, lp_esist, ar_descr, bc_code,
+                 ROW_NUMBER() OVER (PARTITION BY lp_ubicaz ORDER BY lp_esist DESC) as rn
+          FROM lotcpro
+          LEFT JOIN artico ON lotcpro.lp_codart = artico.ar_codart
+          LEFT JOIN barcod ON artico.ar_codart = barcod.bc_codart
+        ) stock ON anaubic.au_ubicaz = stock.lp_ubicaz AND stock.rn = 1
+        WHERE anaubic.au_ubicaz LIKE @query
+           OR stock.lp_codart LIKE @query
+           OR stock.bc_code LIKE @query
+           OR stock.ar_descr LIKE @query
+        ORDER BY anaubic.au_ubicaz
+      `);
+
+    return result.recordset.length > 0
+      ? result.recordset
+      : [{ message: 'Nessuna ubicazione trovata per la ricerca: ' + query }];
+  } catch (err) {
+    console.error('searchLocationInternal error:', err);
+    return [{ error: 'Errore nella ricerca: ' + err.message }];
+  }
+}
+
+// Helper function: Get optimization suggestions
+async function getOptimizationSuggestionsInternal({ days = 30, minFrequency = 5 }) {
+  try {
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request()
+      .input('days', sql.Int, days)
+      .input('minFrequency', sql.Int, minFrequency)
+      .query(`
+        WITH MovementStats AS (
+          SELECT
+            mm_ubicaz,
+            COUNT(*) as frequency,
+            SUM(CASE WHEN tabcaum.tb_esist = -1 THEN 1 ELSE 0 END) as pickups
+          FROM movmag
+          INNER JOIN tabcaum ON movmag.mm_causale = tabcaum.tb_codcaum
+          WHERE mm_ultagg >= DATEADD(day, -@days, GETDATE())
+          GROUP BY mm_ubicaz
+          HAVING COUNT(*) >= @minFrequency
+        )
+        SELECT TOP 10
+          anaubic.au_ubicaz AS ubicazione,
+          anaubic.au_scaff AS scaffale,
+          anaubic.au_posiz AS posizione,
+          anaubic.au_piano AS piano,
+          MovementStats.frequency AS frequenzaUtilizzo,
+          MovementStats.pickups AS prelievi
+        FROM anaubic
+        INNER JOIN MovementStats ON anaubic.au_ubicaz = MovementStats.mm_ubicaz
+        WHERE anaubic.au_piano > 2
+        ORDER BY MovementStats.pickups DESC
+      `);
+
+    return result.recordset.length > 0
+      ? result.recordset
+      : [{ message: 'Nessun suggerimento di ottimizzazione disponibile per i parametri specificati.' }];
+  } catch (err) {
+    console.error('getOptimizationSuggestionsInternal error:', err);
+    return [{ error: 'Errore nel recupero suggerimenti: ' + err.message }];
+  }
+}
+
+// Helper function: Get heatmap statistics
+async function getHeatmapDataInternal({ days = 30 }) {
+  try {
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request()
+      .input('days', sql.Int, days)
+      .query(`
+        SELECT TOP 10
+          mm_ubicaz AS ubicazione,
+          COUNT(*) AS totalMovimenti,
+          SUM(CASE WHEN tabcaum.tb_esist = 1 THEN 1 ELSE 0 END) AS entrate,
+          SUM(CASE WHEN tabcaum.tb_esist = -1 THEN 1 ELSE 0 END) AS uscite
+        FROM movmag
+        INNER JOIN tabcaum ON movmag.mm_causale = tabcaum.tb_codcaum
+        WHERE mm_ultagg >= DATEADD(day, -@days, GETDATE())
+          AND mm_ubicaz NOT LIKE '%00 00 00%'
+        GROUP BY mm_ubicaz
+        ORDER BY COUNT(*) DESC
+      `);
+
+    const stats = {
+      topLocations: result.recordset,
+      totalAnalyzed: result.recordset.length,
+      periodDays: days
+    };
+
+    return stats;
+  } catch (err) {
+    console.error('getHeatmapDataInternal error:', err);
+    return { error: 'Errore nel recupero dati heatmap: ' + err.message };
+  }
+}
+
+// Main Chat Endpoint
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { message, conversationHistory = [] } = req.body;
+
+    // Validation
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'Messaggio non valido' });
+    }
+
+    if (message.length > 1000) {
+      return res.status(400).json({ error: 'Messaggio troppo lungo (max 1000 caratteri)' });
+    }
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(500).json({ error: 'Chiave API Anthropic non configurata' });
+    }
+
+    // Define available tools for the AI
+    const tools = [
+      {
+        name: "search_location",
+        description: "Cerca ubicazioni nel magazzino per codice ubicazione, codice articolo, barcode o descrizione. Restituisce fino a 5 risultati con dettagli completi.",
+        input_schema: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "Il termine di ricerca (codice ubicazione, codice articolo, barcode o descrizione)"
+            }
+          },
+          required: ["query"]
+        }
+      },
+      {
+        name: "get_optimization_suggestions",
+        description: "Ottieni suggerimenti per ottimizzare il posizionamento degli articoli nel magazzino. Identifica ubicazioni ad alto utilizzo che potrebbero essere riposizionate per maggiore efficienza.",
+        input_schema: {
+          type: "object",
+          properties: {
+            days: {
+              type: "number",
+              description: "Numero di giorni da analizzare per lo storico movimenti (default: 30)",
+              default: 30
+            },
+            minFrequency: {
+              type: "number",
+              description: "Frequenza minima di utilizzo per considerare un'ubicazione (default: 5)",
+              default: 5
+            }
+          }
+        }
+      },
+      {
+        name: "get_heatmap_data",
+        description: "Ottieni statistiche di utilizzo delle ubicazioni (heatmap) per identificare le aree più attive del magazzino.",
+        input_schema: {
+          type: "object",
+          properties: {
+            days: {
+              type: "number",
+              description: "Numero di giorni da analizzare (default: 30)",
+              default: 30
+            }
+          }
+        }
+      }
+    ];
+
+    // System prompt with context
+    const systemPrompt = `Sei un assistente AI per un sistema di gestione magazzino 3D.
+
+Il tuo ruolo è aiutare gli utenti a:
+- Cercare ubicazioni, articoli e barcode nel magazzino
+- Fornire suggerimenti per ottimizzare il posizionamento degli articoli
+- Analizzare l'utilizzo del magazzino con statistiche e heatmap
+- Rispondere a domande sulla logistica e gestione del magazzino
+
+Hai accesso a queste funzioni:
+- search_location: cerca ubicazioni per codice, articolo o barcode
+- get_optimization_suggestions: ottieni suggerimenti di ottimizzazione basati su dati reali
+- get_heatmap_data: analizza utilizzo e movimenti del magazzino
+
+Linee guida:
+- Rispondi SEMPRE in italiano
+- Sii conciso e professionale
+- Usa i dati reali dalle funzioni quando disponibili
+- Se non trovi risultati, suggerisci alternative o chiedi chiarimenti
+- Mantieni il contesto della conversazione
+- Formatta i numeri in modo leggibile (es: 1.234 invece di 1234)
+
+Ricorda: stai assistendo operatori di magazzino, quindi usa un linguaggio chiaro e pratico.`;
+
+    // Build messages array with conversation history
+    const messages = [
+      ...conversationHistory,
+      { role: "user", content: message }
+    ];
+
+    // First API call to Claude
+    let response = await anthropic.messages.create({
+      model: "claude-3-5-haiku-20241022",
+      max_tokens: 2048,
+      system: systemPrompt,
+      tools: tools,
+      messages: messages
+    });
+
+    // Handle tool calls
+    while (response.stop_reason === "tool_use") {
+      const toolUse = response.content.find(block => block.type === "tool_use");
+
+      if (!toolUse) break;
+
+      console.log(`AI chiamando tool: ${toolUse.name}`, toolUse.input);
+
+      // Execute the tool
+      let toolResult;
+      switch (toolUse.name) {
+        case "search_location":
+          toolResult = await searchLocationInternal(toolUse.input.query);
+          break;
+
+        case "get_optimization_suggestions":
+          toolResult = await getOptimizationSuggestionsInternal(toolUse.input);
+          break;
+
+        case "get_heatmap_data":
+          toolResult = await getHeatmapDataInternal(toolUse.input);
+          break;
+
+        default:
+          toolResult = { error: "Funzione non riconosciuta" };
+      }
+
+      console.log(`Tool result:`, JSON.stringify(toolResult).substring(0, 200));
+
+      // Continue conversation with tool result
+      messages.push({
+        role: "assistant",
+        content: response.content
+      });
+
+      messages.push({
+        role: "user",
+        content: [{
+          type: "tool_result",
+          tool_use_id: toolUse.id,
+          content: JSON.stringify(toolResult)
+        }]
+      });
+
+      // Call Claude again with the tool result
+      response = await anthropic.messages.create({
+        model: "claude-3-5-haiku-20241022",
+        max_tokens: 2048,
+        system: systemPrompt,
+        tools: tools,
+        messages: messages
+      });
+    }
+
+    // Extract text response
+    const textContent = response.content.find(block => block.type === "text");
+    const responseText = textContent ? textContent.text : "Mi dispiace, non sono riuscito a elaborare una risposta.";
+
+    res.json({
+      response: responseText,
+      conversationId: Date.now().toString() // Simple conversation tracking
+    });
+
+  } catch (err) {
+    console.error('Chat API Error:', err);
+
+    // Handle specific Anthropic errors
+    if (err.status === 401) {
+      return res.status(500).json({ error: 'Chiave API Anthropic non valida' });
+    }
+
+    if (err.status === 429) {
+      return res.status(429).json({ error: 'Troppi messaggi. Riprova tra poco.' });
+    }
+
+    res.status(500).json({
+      error: 'Errore nel servizio chat',
+      details: err.message
+    });
   }
 });
 
