@@ -2,7 +2,7 @@
 
 Un visualizzatore 3D interattivo per la gestione e ottimizzazione del magazzino con analisi avanzate e suggerimenti intelligenti.
 
-![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19.2.3-61dafb.svg)
 ![Three.js](https://img.shields.io/badge/Three.js-0.182.0-black.svg)
@@ -17,6 +17,7 @@ Un visualizzatore 3D interattivo per la gestione e ottimizzazione del magazzino 
 - **Modalità FPS** (First Person) per navigare in prima persona nel magazzino
 - **Colori dinamici** per identificare stato ubicazioni (piena, vuota, con movimenti pendenti)
 - **Selezione ubicazioni** con dettagli completi e pannello scrollabile
+- **Multi-articolo per ubicazione**: visualizzazione elenco articoli quando presenti più prodotti
 - **Ricerca rapida** per codice ubicazione, articolo o **barcode**
 - **Etichette corridoi** visualizzate a pavimento per orientamento
 - **Doppio click** per cambiare punto di orbita della camera
@@ -471,6 +472,19 @@ CREATE INDEX idx_lotcpro_ubicaz ON lotcpro(lp_ubicaz, lp_codart, lp_esist);
 5. Apri una Pull Request
 
 ## 📝 Changelog
+
+### v1.4.0 (2024-12-30) - Multi-Articolo per Ubicazione
+#### ✨ Nuove Funzionalità
+- ✅ **Supporto multi-articolo per ubicazione**: visualizzazione elenco quando più articoli nella stessa ubicazione
+- ✅ **Sezione articoli espandibile**: badge con conteggio, lista cliccabile con dettagli
+- ✅ **Selezione articolo**: click per vedere dettagli completi (codice, descrizione, quantità, barcode)
+- ✅ **Vista SQL ottimizzata**: ArticlesJSON con TOP 1 barcode per evitare duplicazioni
+
+#### 🔧 Miglioramenti Tecnici
+- ✅ Nuovo tipo `Article` in TypeScript
+- ✅ Campo `articles[]` in `LocationData`
+- ✅ Parser aggiornato per ArticlesJSON
+- ✅ Vista `vw_WarehouseLocations` con OUTER APPLY per barcode singolo
 
 ### v1.3.0 (2024-12-22) - AI ChatBot Release 🤖
 #### ✨ Nuove Funzionalità

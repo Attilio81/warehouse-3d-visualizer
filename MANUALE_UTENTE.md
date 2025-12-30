@@ -151,6 +151,7 @@ La sidebar è organizzata in **sezioni collassabili**:
 - **Descrizione Prodotto**: nome articolo
 - **Barcode**: codice a barre (se disponibile)
 - **Quantità**: pezzi presenti
+- **Elenco Articoli**: se più articoli nella stessa ubicazione (sezione espandibile)
 - **Coordinate 3D**: posizione nello spazio
 - **Pulsante Sposta Articolo**: per creare movimento rapido
 
@@ -218,6 +219,18 @@ Quando attiva la modalità FPS:
    - Codice articolo
    - Descrizione prodotto
    - Quantità disponibile
+
+#### Ubicazioni con Più Articoli 🆕
+Quando un'ubicazione contiene più articoli:
+1. Appare la sezione **"Articoli in ubicazione"** con badge numerico
+2. Click per espandere l'elenco completo
+3. Ogni articolo mostra:
+   - Codice articolo
+   - Quantità
+   - Descrizione (se disponibile)
+   - Barcode (se disponibile)
+4. Click su un articolo per vedere i **dettagli completi**
+5. L'articolo selezionato viene evidenziato in blu
 
 #### Visualizzare solo Ubicazioni Piene
 1. Click sul menu **Filtri** in alto a destra
@@ -688,9 +701,20 @@ Quando si richiede assistenza, includere:
 
 ## 📄 Note sulla Versione
 
-**Versione**: 1.2.0  
-**Ultimo aggiornamento**: 18 Dicembre 2024  
+**Versione**: 1.4.0  
+**Ultimo aggiornamento**: 30 Dicembre 2024  
 **Compatibilità**: Node.js 18+, React 19, SQL Server 2016+
+
+### Novità v1.4.0
+- ✅ **Multi-articolo per ubicazione**: visualizzazione elenco quando più articoli nella stessa ubicazione
+- ✅ **Sezione articoli espandibile**: badge con conteggio, lista cliccabile
+- ✅ **Selezione articolo**: click per vedere dettagli completi
+- ✅ **Vista SQL ottimizzata**: barcode singolo per articolo
+
+### Novità v1.3.0
+- ✅ **Assistente AI integrato** con Claude 3.5 Haiku
+- ✅ **Ricerca in linguaggio naturale**
+- ✅ **Function calling** per interrogazione database
 
 ### Novità v1.2.0
 - ✅ **Heatmap basata su movimenti reali** (tabella `movmag`)
