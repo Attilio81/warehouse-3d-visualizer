@@ -1,4 +1,4 @@
-import { LocationData, Stats, SQLLocationData } from '../types';
+import { LocationData, Stats, SQLLocationData, Article } from '../types';
 
 // Configuration for physical dimensions (relative units)
 const CONFIG = {
@@ -148,6 +148,25 @@ export const parseSQLData = (data: SQLLocationData[]): { locations: LocationData
       ? row.mov_out
       : parseFloat(row.mov_out) || 0;
 
+    // Parse ArticlesJSON se presente
+    let articles: Article[] | undefined;
+    if (row.ArticlesJSON) {
+      try {
+        const parsed = JSON.parse(row.ArticlesJSON);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          articles = parsed.map((art: { productCode: string; quantity: number; description?: string; barcode?: string; barcodeUnmis?: string }) => ({
+            productCode: art.productCode || '',
+            quantity: typeof art.quantity === 'number' ? art.quantity : parseFloat(art.quantity) || 0,
+            description: art.description || '',
+            barcode: art.barcode || '',
+            barcodeUnmis: art.barcodeUnmis || ''
+          }));
+        }
+      } catch (e) {
+        console.warn(`Failed to parse ArticlesJSON for ${row.au_ubicaz}:`, e);
+      }
+    }
+
     locations.push({
       id: index,
       originalString: row.au_ubicaz,
@@ -165,7 +184,8 @@ export const parseSQLData = (data: SQLLocationData[]): { locations: LocationData
       barcodeUnmis: row.barcode_unmis || '',
       barcodeQuant: typeof row.barcode_quant === 'number' ? row.barcode_quant : parseFloat(row.barcode_quant) || 0,
       movIn: movIn,
-      movOut: movOut
+      movOut: movOut,
+      articles: articles
     });
   });
 

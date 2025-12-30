@@ -36,11 +36,15 @@ SELECT
             l.lp_codart AS productCode,
             l.lp_esist AS quantity,
             ISNULL(a.ar_descr, '') AS description,
-            ISNULL(bc.bc_code, '') AS barcode,
-            ISNULL(bc.bc_unmis, '') AS barcodeUnmis
+            ISNULL(bc_top.bc_code, '') AS barcode,
+            ISNULL(bc_top.bc_unmis, '') AS barcodeUnmis
         FROM lotcpro l
         LEFT JOIN artico a ON l.codditt = a.codditt AND l.lp_codart = a.ar_codart
-        LEFT JOIN barcode bc ON l.codditt = bc.codditt AND l.lp_codart = bc.bc_codart
+        OUTER APPLY (
+            SELECT TOP 1 bc.bc_code, bc.bc_unmis
+            FROM barcode bc
+            WHERE bc.codditt = l.codditt AND bc.bc_codart = l.lp_codart
+        ) bc_top
         WHERE l.codditt = anaubic.codditt
             AND l.lp_ubicaz = anaubic.au_ubicaz
             AND l.lp_magaz = anaubic.au_magaz

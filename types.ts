@@ -1,3 +1,12 @@
+// Articolo presente in un'ubicazione
+export interface Article {
+  productCode: string;
+  quantity: number;
+  description?: string;
+  barcode?: string;
+  barcodeUnmis?: string;
+}
+
 export interface LocationData {
   id: number;
   originalString: string;
@@ -7,15 +16,16 @@ export interface LocationData {
   x: number;
   y: number;
   z: number;
-  productCode?: string;
+  productCode?: string;   // Articolo principale (quello con più giacenza)
   productDesc?: string;
-  quantity?: number;
+  quantity?: number;      // Quantità articolo principale
   locationCode?: string;
-  barcode?: string;     // Codice a barre articolo
-  barcodeUnmis?: string; // Unità di misura barcode
-  barcodeQuant?: number; // Quantità per barcode
-  movIn?: number;       // Quantità in arrivo (movimenti pendenti)
-  movOut?: number;      // Quantità in uscita (movimenti pendenti)
+  barcode?: string;       // Codice a barre articolo principale
+  barcodeUnmis?: string;  // Unità di misura barcode
+  barcodeQuant?: number;  // Quantità per barcode
+  movIn?: number;         // Quantità in arrivo (movimenti pendenti)
+  movOut?: number;        // Quantità in uscita (movimenti pendenti)
+  articles?: Article[];   // Tutti gli articoli nell'ubicazione (se più di uno)
 }
 
 export interface Stats {
@@ -45,6 +55,7 @@ export interface SQLLocationData {
   barcode_quant: number;  // Quantità per barcode
   mov_in: number;   // Movimenti in arrivo (pendenti)
   mov_out: number;  // Movimenti in uscita (pendenti)
+  ArticlesJSON?: string;  // JSON array di tutti gli articoli nell'ubicazione
 }
 
 export interface Movement {

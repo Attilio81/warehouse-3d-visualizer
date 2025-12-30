@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { LocationData } from '../types';
-import { Map, Box, Layers, Barcode, PackagePlus, Send, X, Loader2, MousePointer2, History, ArrowDownCircle, ArrowUpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { LocationData, Article } from '../types';
+import { Map, Box, Layers, Barcode, PackagePlus, Send, X, Loader2, MousePointer2, History, ArrowDownCircle, ArrowUpCircle, ChevronDown, ChevronUp, Package } from 'lucide-react';
 
 interface MovementHistoryItem {
   ubicazione: string;
@@ -43,6 +43,10 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
 
   // Sezione posizione (collassata di default)
   const [showPosition, setShowPosition] = useState(false);
+
+  // Sezione articoli (espansa se più di uno)
+  const [showArticles, setShowArticles] = useState(false);
+  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
 
   // Storico movimenti
   const [showHistory, setShowHistory] = useState(false);
@@ -146,7 +150,84 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
         </div>
       )}
 
-      {location.productCode && (
+      {/* Sezione Articoli - Mostra elenco se più di uno */}
+      {location.articles && location.articles.length > 1 ? (
+        <div className="mt-4 pt-3 border-t border-slate-700">
+          <button
+            onClick={() => setShowArticles(!showArticles)}
+            className="w-full flex items-center justify-between text-sm text-slate-400 hover:text-slate-200 transition-colors py-1"
+          >
+            <span className="flex items-center gap-2">
+              <Package size={14} />
+              Articoli in ubicazione
+              <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                {location.articles.length}
+              </span>
+            </span>
+            {showArticles ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+
+          {showArticles && (
+            <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+              {location.articles.map((article, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => setSelectedArticle(selectedArticle?.productCode === article.productCode ? null : article)}
+                  className={`p-2 rounded border cursor-pointer transition-colors ${
+                    selectedArticle?.productCode === article.productCode
+                      ? 'bg-blue-900/40 border-blue-500'
+                      : 'bg-slate-900/50 border-slate-700 hover:border-slate-500'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-white text-sm">{article.productCode}</span>
+                    <span className="font-mono text-green-400 font-bold text-sm">{article.quantity}</span>
+                  </div>
+                  {article.description && (
+                    <div className="text-xs text-slate-400 truncate mt-1">
+                      {article.description}
+                    </div>
+                  )}
+                  {article.barcode && (
+                    <div className="flex items-center gap-1 text-xs text-blue-400 mt-1">
+                      <Barcode size={10} />
+                      {article.barcode}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Dettaglio articolo selezionato */}
+          {selectedArticle && (
+            <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/50 rounded">
+              <div className="text-xs text-blue-400 mb-2 font-semibold">Articolo Selezionato</div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Codice</span>
+                  <span className="font-mono text-white">{selectedArticle.productCode}</span>
+                </div>
+                {selectedArticle.description && (
+                  <div className="text-xs text-slate-300 bg-slate-900/50 p-2 rounded">
+                    {selectedArticle.description}
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Quantità</span>
+                  <span className="font-mono text-green-400 font-bold">{selectedArticle.quantity}</span>
+                </div>
+                {selectedArticle.barcode && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-400 flex items-center gap-2"><Barcode size={14} /> Barcode</span>
+                    <span className="font-mono text-blue-400">{selectedArticle.barcode}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : location.productCode && (
         <div className="mt-4 pt-3 border-t border-slate-700 space-y-2">
           <div className="text-xs text-slate-500 mb-1">Prodotto</div>
           <div className="flex items-center justify-between text-sm">
