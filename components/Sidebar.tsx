@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { LocationData, Stats } from '../types';
 import { SearchBar } from './SearchBar';
 import { CollapsibleSection } from './CollapsibleSection';
-import { Package, Box, Layers, RefreshCw, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Maximize, MousePointer2, Database, AlertCircle, PackagePlus, List, TrendingUp, Activity, Navigation, Eye, Filter, Keyboard, Palette } from 'lucide-react';
+import { DbConfigPanel } from './DbConfigPanel';
+import { Package, Box, Layers, RefreshCw, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Maximize, MousePointer2, Database, AlertCircle, PackagePlus, List, TrendingUp, Activity, Navigation, Eye, Filter, Keyboard, Palette, Settings } from 'lucide-react';
 
 interface SidebarProps {
   onReload: () => void;
@@ -56,6 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   fpsMode = false
 }) => {
   const [isOpen, setIsOpen] = useState(true);
+  const [isDbConfigOpen, setIsDbConfigOpen] = useState(false);
 
   return (
     <div 
@@ -116,6 +118,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
                 {isLoading ? 'Caricamento...' : 'Ricarica Dati'}
+              </button>
+
+              <button
+                onClick={() => setIsDbConfigOpen(true)}
+                className="bg-slate-700 hover:bg-slate-600 text-white text-sm py-2 px-3 rounded font-medium transition-colors flex items-center justify-center gap-2 border border-slate-600"
+              >
+                <Settings size={14} />
+                Setup Database
+                <span className="text-[9px] bg-yellow-600 px-1.5 py-0.5 rounded">DEMO</span>
               </button>
 
               {stats && (
@@ -469,6 +480,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
       )}
+
+      {/* Database Config Panel */}
+      <DbConfigPanel
+        isOpen={isDbConfigOpen}
+        onClose={() => setIsDbConfigOpen(false)}
+      />
     </div>
   );
 };

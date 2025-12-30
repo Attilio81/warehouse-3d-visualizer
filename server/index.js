@@ -3,8 +3,14 @@ import sql from 'mssql';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import Anthropic from '@anthropic-ai/sdk';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = 4000;
@@ -17,7 +23,8 @@ const anthropic = new Anthropic({
 app.use(cors());
 app.use(express.json());
 
-const dbConfig = {
+// Mutable DB config - can be changed at runtime for demo purposes
+let dbConfig = {
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   server: process.env.DB_SERVER,
@@ -28,83 +35,79 @@ const dbConfig = {
   },
 };
 
+// Function to update DB config and close existing connections
+async function updateDbConfig(newConfig) {
+  // Close existing connections
+  try {
+    await sql.close();
+  } catch (err) {
+    // Ignore close errors
+  }
+  
+  // Update config
+  dbConfig = {
+    ...dbConfig,
+    ...newConfig,
+    options: dbConfig.options, // Keep options unchanged
+  };
+  
+  return dbConfig;
+}
+
 // SQL Query - Show ALL locations from anaubic, with stock info, pending movements and barcodes
 // Using OUTER APPLY to get the product with highest stock (if any exists)
-const QUERY = `
-SELECT
-    anaubic.au_ubicaz,
-    anaubic.au_magaz,
-    anaubic.au_zona,
-    anaubic.au_scaff,
-    anaubic.au_posiz,
-    anaubic.au_piano,
-    anaubic.au_cella,
-    anaubic.au_tipo,
-    anaubic.au_percorso,
-    anaubic.au_indrot,
-    anaubic.au_volume,
-    anaubic.au_monopr,
-    anaubic.au_barcode,
-    anaubic.au_bloccata,
-    anaubic.au_descr,
-    anaubic.au_livello,
-    ISNULL(stock.lp_codart, '') AS lp_codart,
-    ISNULL(stock.lp_esist, 0) AS lp_esist,
-    ISNULL(stock.ar_descr, '') AS ar_descr,
-    ISNULL(stock.bc_code, '') AS barcode,
-    ISNULL(stock.bc_unmis, '') AS barcode_unmis,
-    ISNULL(stock.bc_quant, 0) AS barcode_quant,
-    ISNULL(mov_in.quantita_in, 0) AS mov_in,
-    ISNULL(mov_out.quantita_out, 0) AS mov_out
-FROM
-    anaubic
-OUTER APPLY (
-    SELECT TOP 1
-        lotcpro.lp_codart,
-        lotcpro.lp_esist,
-        artico.ar_descr,
-        bc.bc_code,
-        bc.bc_unmis,
-        bc.bc_quant
-    FROM lotcpro
-    LEFT JOIN artico ON lotcpro.codditt = artico.codditt
-        AND lotcpro.lp_codart = artico.ar_codart
-    LEFT JOIN barcode bc ON lotcpro.codditt = bc.codditt
-        AND lotcpro.lp_codart = bc.bc_codart
-    WHERE lotcpro.codditt = anaubic.codditt
-        AND lotcpro.lp_ubicaz = anaubic.au_ubicaz
-        AND lotcpro.lp_magaz = anaubic.au_magaz
-        AND lotcpro.lp_esist > 0
-    ORDER BY lotcpro.lp_esist DESC
-) stock
-LEFT JOIN (
-    SELECT ubicaz_destinazione, SUM(quantita) as quantita_in
-    FROM egmovimentimag3d
-    WHERE confermato = 0
-    GROUP BY ubicaz_destinazione
-) mov_in ON anaubic.au_ubicaz = mov_in.ubicaz_destinazione
-LEFT JOIN (
-    SELECT ubicaz_partenza, SUM(quantita) as quantita_out
-    FROM egmovimentimag3d
-    WHERE confermato = 0
-    GROUP BY ubicaz_partenza
-) mov_out ON anaubic.au_ubicaz = mov_out.ubicaz_partenza
-WHERE
-    anaubic.au_ubicaz IS NOT NULL
-    AND LEN(LTRIM(RTRIM(anaubic.au_ubicaz))) > 0
-ORDER BY
-    anaubic.au_scaff, anaubic.au_posiz, anaubic.au_piano
-`;
+// Funzione condivisa per ottenere i dati del magazzino
+// Usa la vista vw_WarehouseLocations che include anche il JSON multi-articolo
+async function getWarehouseData() {
+  try {
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request().query('SELECT * FROM vw_WarehouseLocations ORDER BY au_ubicaz');
+    return result.recordset;
+  } catch (err) {
+    console.error('getWarehouseData error:', err);
+    throw err;
+  }
+}
+
+// Shared: Get heatmap data (location usage frequency)
+// Shared: Get heatmap data (location usage frequency)
+async function getHeatmapData(days) {
+  try {
+    const pool = await sql.connect(dbConfig);
+    // Usa la vista vw_MovementHeatmap (default 365gg).
+    // Nota: Il parametro 'days' viene ignorato perché la vista è statica, 
+    // ma la firma è mantenuta per compatibilità.
+    const result = await pool.request().query('SELECT * FROM vw_MovementHeatmap ORDER BY pickupCount DESC');
+    return result.recordset;
+  } catch (err) {
+    console.error('getHeatmapData error:', err);
+    throw err;
+  }
+}
+
+// Shared: Get optimization suggestions
+// Shared: Get optimization suggestions
+async function getOptimizationSuggestions(days, minFrequency) {
+  try {
+    const pool = await sql.connect(dbConfig);
+    // Usa la vista vw_OptimizationSuggestions (default 365gg, minFreq 3).
+    // Nota: I parametri passati vengono ignorati perché la vista è statica.
+    const result = await pool.request().query('SELECT * FROM vw_OptimizationSuggestions ORDER BY totalMovements DESC');
+    return result.recordset;
+  } catch (err) {
+    console.error('getOptimizationSuggestions error:', err);
+    throw err;
+  }
+}
+
+// ============================================
+// REST API ENDPOINTS
+// ============================================
 
 app.get('/api/warehouse-data', async (req, res) => {
   try {
-    const pool = await sql.connect(dbConfig);
-    const result = await pool.request().query(QUERY);
-
-    // Transform data to match frontend requirements if needed,
-    // but sending raw for now is fine, frontend can parse.
-    res.json(result.recordset);
-
+    const data = await getWarehouseData();
+    res.json(data);
   } catch (err) {
     console.error('SQL Error:', err);
     res.status(500).json({ error: 'Failed to fetch data', details: err.message });
@@ -243,47 +246,9 @@ app.delete('/api/movimenti/:id', async (req, res) => {
 // API: Get heatmap data (frequenza utilizzo ubicazioni basata su movimenti REALI)
 app.get('/api/optimization/heatmap', async (req, res) => {
   try {
-    const { days = 90 } = req.query; // Default 90 giorni per avere più dati significativi
-    const pool = await sql.connect(dbConfig);
-
-    // Query basata sui movimenti REALI (tabella movmag)
-    // tb_esist: 1 = carico (entrata), altri = scarico (uscita/prelievo)
-    // Contiamo sia entrate che uscite per avere un quadro completo dell'attività
-    const result = await pool.request()
-      .input('days', sql.Int, days)
-      .query(`
-        WITH MovimentStats AS (
-          SELECT
-            mm_ubicaz as ubicazione,
-            COUNT(*) as total_movements,
-            SUM(CASE WHEN tabcaum.tb_esist = 1 THEN 1 ELSE 0 END) as entrate,
-            SUM(CASE WHEN tabcaum.tb_esist != 1 THEN 1 ELSE 0 END) as uscite,
-            SUM(ABS(mm_quant)) as quantita_totale
-          FROM movmag
-          INNER JOIN tabcaum ON movmag.mm_causale = tabcaum.tb_codcaum
-          WHERE mm_ultagg >= DATEADD(day, -@days, GETDATE())
-            AND mm_ubicaz IS NOT NULL
-            AND LEN(LTRIM(RTRIM(mm_ubicaz))) > 0
-          GROUP BY mm_ubicaz
-        )
-        SELECT
-          anaubic.au_ubicaz as locationCode,
-          anaubic.au_scaff,
-          anaubic.au_posiz,
-          anaubic.au_piano,
-          ISNULL(ms.total_movements, 0) as pickupCount,
-          ISNULL(ms.entrate, 0) as entrate,
-          ISNULL(ms.uscite, 0) as uscite,
-          ISNULL(ms.quantita_totale, 0) as quantitaTotale
-        FROM anaubic
-        LEFT JOIN MovimentStats ms ON anaubic.au_ubicaz = ms.ubicazione
-        WHERE anaubic.au_ubicaz IS NOT NULL
-          AND LEN(LTRIM(RTRIM(anaubic.au_ubicaz))) > 0
-          AND anaubic.au_ubicaz != '00 00 00'
-          AND anaubic.au_scaff > 0
-      `);
-
-    res.json(result.recordset);
+    const { days = 365 } = req.query;
+    const data = await getHeatmapData(parseInt(days));
+    res.json(data);
   } catch (err) {
     console.error('SQL Error:', err);
     res.status(500).json({ error: 'Failed to fetch heatmap data', details: err.message });
@@ -337,56 +302,9 @@ app.get('/api/optimization/location-stats', async (req, res) => {
 // API: Get optimal location suggestions (basato su movimenti REALI)
 app.get('/api/optimization/suggestions', async (req, res) => {
   try {
-    const { days = 90, minFrequency = 3 } = req.query;
-    const pool = await sql.connect(dbConfig);
-
-    // Query per trovare prodotti ad alta rotazione basata su movimenti REALI
-    const result = await pool.request()
-      .input('days', sql.Int, days)
-      .input('minFrequency', sql.Int, minFrequency)
-      .query(`
-        WITH MovimentStats AS (
-          SELECT
-            mm_ubicaz as ubicazione,
-            mm_codart as codart,
-            COUNT(*) as frequency,
-            SUM(CASE WHEN tabcaum.tb_esist != 1 THEN 1 ELSE 0 END) as uscite,
-            MAX(mm_ultagg) as last_movement
-          FROM movmag
-          INNER JOIN tabcaum ON movmag.mm_causale = tabcaum.tb_codcaum
-          WHERE mm_ultagg >= DATEADD(day, -@days, GETDATE())
-            AND mm_ubicaz IS NOT NULL
-            AND LEN(LTRIM(RTRIM(mm_ubicaz))) > 0
-          GROUP BY mm_ubicaz, mm_codart
-          HAVING SUM(CASE WHEN tabcaum.tb_esist != 1 THEN 1 ELSE 0 END) >= @minFrequency
-        ),
-        CurrentLocations AS (
-          SELECT
-            ms.*,
-            anaubic.au_piano,
-            anaubic.au_scaff,
-            anaubic.au_posiz,
-            anaubic.au_volume,
-            artico.ar_volume,
-            artico.ar_descr
-          FROM MovimentStats ms
-          INNER JOIN anaubic ON ms.ubicazione = anaubic.au_ubicaz
-          LEFT JOIN artico ON ms.codart = artico.ar_codart
-        )
-        SELECT
-          ubicazione as currentLocation,
-          codart as productCode,
-          ar_descr as productDesc,
-          uscite as pickupFrequency,
-          frequency as totalMovements,
-          au_piano as currentLevel,
-          au_scaff as currentAisle,
-          ISNULL(ar_volume, 0) as productVolume
-        FROM CurrentLocations
-        ORDER BY uscite DESC
-      `);
-
-    res.json(result.recordset);
+    const { days = 365, minFrequency = 3 } = req.query;
+    const data = await getOptimizationSuggestions(parseInt(days), parseInt(minFrequency));
+    res.json(data);
   } catch (err) {
     console.error('SQL Error:', err);
     res.status(500).json({ error: 'Failed to fetch suggestions', details: err.message });
@@ -466,7 +384,7 @@ app.get('/api/movimenti/storico/:ubicazione', async (req, res) => {
   try {
     const { ubicazione } = req.params;
     const { limit = 50 } = req.query;
-    
+
     const pool = await sql.connect(dbConfig);
     const result = await pool.request()
       .input('ubicazione', sql.VarChar, ubicazione)
@@ -508,7 +426,7 @@ app.get('/api/movimenti/storico-articolo/:codart', async (req, res) => {
   try {
     const { codart } = req.params;
     const { limit = 50 } = req.query;
-    
+
     const pool = await sql.connect(dbConfig);
     const result = await pool.request()
       .input('codart', sql.VarChar, codart)
@@ -548,114 +466,96 @@ app.get('/api/movimenti/storico-articolo/:codart', async (req, res) => {
 // CHATBOT AI ENDPOINT
 // ============================================
 
-// Helper function: Search location by code, article, or barcode
+// Helper function: Search location - usa la funzione condivisa getWarehouseData()
+// Helper function: Search location - Esegue una query SQL diretta ed efficiente
+// Cerca sia nelle ubicazioni che negli articoli/barcode
 async function searchLocationInternal(query) {
   try {
     const pool = await sql.connect(dbConfig);
+    const searchTerm = `%${query.trim()}%`;
+
+    // Query ottimizzata che cerca direttamente nella tabella giacenze (lotcpro)
+    // Questo permette di trovare un articolo anche se non è il principale dell'ubicazione
     const result = await pool.request()
-      .input('query', sql.VarChar, `%${query}%`)
+      .input('search', sql.NVarChar, searchTerm)
       .query(`
-        SELECT TOP 5
+        SELECT DISTINCT TOP 10
           anaubic.au_ubicaz AS ubicazione,
           anaubic.au_scaff AS scaffale,
           anaubic.au_posiz AS posizione,
           anaubic.au_piano AS piano,
-          ISNULL(stock.lp_codart, '') AS codiceArticolo,
-          ISNULL(stock.lp_esist, 0) AS quantita,
-          ISNULL(stock.ar_descr, '') AS descrizioneArticolo,
-          ISNULL(stock.bc_code, '') AS barcode
+          ISNULL(lotcpro.lp_codart, '') AS codiceArticolo,
+          ISNULL(lotcpro.lp_esist, 0) AS quantita,
+          ISNULL(artico.ar_descr, '') AS descrizioneArticolo
         FROM anaubic
-        LEFT JOIN (
-          SELECT lp_ubicaz, lp_codart, lp_esist, ar_descr, bc_code,
-                 ROW_NUMBER() OVER (PARTITION BY lp_ubicaz ORDER BY lp_esist DESC) as rn
-          FROM lotcpro
-          LEFT JOIN artico ON lotcpro.lp_codart = artico.ar_codart
-          LEFT JOIN barcod ON artico.ar_codart = barcod.bc_codart
-        ) stock ON anaubic.au_ubicaz = stock.lp_ubicaz AND stock.rn = 1
-        WHERE anaubic.au_ubicaz LIKE @query
-           OR stock.lp_codart LIKE @query
-           OR stock.bc_code LIKE @query
-           OR stock.ar_descr LIKE @query
-        ORDER BY anaubic.au_ubicaz
+        LEFT JOIN lotcpro ON anaubic.au_ubicaz = lotcpro.lp_ubicaz AND lotcpro.codditt = anaubic.codditt AND lotcpro.lp_esist > 0
+        LEFT JOIN artico ON lotcpro.lp_codart = artico.ar_codart AND lotcpro.codditt = artico.codditt
+        LEFT JOIN barcode ON lotcpro.lp_codart = barcode.bc_codart AND lotcpro.codditt = barcode.codditt
+        WHERE 
+          (anaubic.au_ubicaz LIKE @search) OR 
+          (lotcpro.lp_codart LIKE @search) OR 
+          (artico.ar_descr LIKE @search) OR 
+          (barcode.bc_code LIKE @search) OR
+          (anaubic.au_barcode LIKE @search)
+        ORDER BY 
+          anaubic.au_ubicaz
       `);
 
     return result.recordset.length > 0
       ? result.recordset
-      : [{ message: 'Nessuna ubicazione trovata per la ricerca: ' + query }];
+      : [{ message: 'Nessun risultato trovato per: ' + query }];
   } catch (err) {
     console.error('searchLocationInternal error:', err);
     return [{ error: 'Errore nella ricerca: ' + err.message }];
   }
 }
 
-// Helper function: Get optimization suggestions
-async function getOptimizationSuggestionsInternal({ days = 30, minFrequency = 5 }) {
+// Helper function: Get optimization suggestions - usa la funzione condivisa getOptimizationSuggestions()
+async function getOptimizationSuggestionsInternal({ days = 365, minFrequency = 3 }) {
   try {
-    const pool = await sql.connect(dbConfig);
-    const result = await pool.request()
-      .input('days', sql.Int, days)
-      .input('minFrequency', sql.Int, minFrequency)
-      .query(`
-        WITH MovementStats AS (
-          SELECT
-            mm_ubicaz,
-            COUNT(*) as frequency,
-            SUM(CASE WHEN tabcaum.tb_esist = -1 THEN 1 ELSE 0 END) as pickups
-          FROM movmag
-          INNER JOIN tabcaum ON movmag.mm_causale = tabcaum.tb_codcaum
-          WHERE mm_ultagg >= DATEADD(day, -@days, GETDATE())
-          GROUP BY mm_ubicaz
-          HAVING COUNT(*) >= @minFrequency
-        )
-        SELECT TOP 10
-          anaubic.au_ubicaz AS ubicazione,
-          anaubic.au_scaff AS scaffale,
-          anaubic.au_posiz AS posizione,
-          anaubic.au_piano AS piano,
-          MovementStats.frequency AS frequenzaUtilizzo,
-          MovementStats.pickups AS prelievi
-        FROM anaubic
-        INNER JOIN MovementStats ON anaubic.au_ubicaz = MovementStats.mm_ubicaz
-        WHERE anaubic.au_piano > 2
-        ORDER BY MovementStats.pickups DESC
-      `);
+    const data = await getOptimizationSuggestions(days, minFrequency);
 
-    return result.recordset.length > 0
-      ? result.recordset
-      : [{ message: 'Nessun suggerimento di ottimizzazione disponibile per i parametri specificati.' }];
+    if (data.length === 0) {
+      return [{ message: 'Nessun suggerimento di ottimizzazione disponibile per i parametri specificati.' }];
+    }
+
+    // Trasforma i dati nel formato atteso dal chatbot
+    return data.slice(0, 10).map(item => ({
+      ubicazione: item.currentLocation,
+      codiceArticolo: item.productCode,
+      descrizione: item.productDesc,
+      frequenzaPrelievi: item.pickupFrequency,
+      livelloAttuale: item.currentLevel,
+      scaffale: item.currentAisle
+    }));
   } catch (err) {
     console.error('getOptimizationSuggestionsInternal error:', err);
     return [{ error: 'Errore nel recupero suggerimenti: ' + err.message }];
   }
 }
 
-// Helper function: Get heatmap statistics
-async function getHeatmapDataInternal({ days = 30 }) {
+// Helper function: Get heatmap data - usa la funzione condivisa getHeatmapData()
+async function getHeatmapDataInternal({ days = 365 }) {
   try {
-    const pool = await sql.connect(dbConfig);
-    const result = await pool.request()
-      .input('days', sql.Int, days)
-      .query(`
-        SELECT TOP 10
-          mm_ubicaz AS ubicazione,
-          COUNT(*) AS totalMovimenti,
-          SUM(CASE WHEN tabcaum.tb_esist = 1 THEN 1 ELSE 0 END) AS entrate,
-          SUM(CASE WHEN tabcaum.tb_esist = -1 THEN 1 ELSE 0 END) AS uscite
-        FROM movmag
-        INNER JOIN tabcaum ON movmag.mm_causale = tabcaum.tb_codcaum
-        WHERE mm_ultagg >= DATEADD(day, -@days, GETDATE())
-          AND mm_ubicaz NOT LIKE '%00 00 00%'
-        GROUP BY mm_ubicaz
-        ORDER BY COUNT(*) DESC
-      `);
+    const data = await getHeatmapData(days);
 
-    const stats = {
-      topLocations: result.recordset,
-      totalAnalyzed: result.recordset.length,
+    // Filtra e ordina per ottenere solo le ubicazioni con movimenti
+    const topLocations = data
+      .filter(loc => loc.pickupCount > 0)
+      .sort((a, b) => b.pickupCount - a.pickupCount)
+      .slice(0, 10)
+      .map(loc => ({
+        ubicazione: loc.locationCode,
+        totalMovimenti: loc.pickupCount,
+        entrate: loc.entrate,
+        uscite: loc.uscite
+      }));
+
+    return {
+      topLocations,
+      totalAnalyzed: topLocations.length,
       periodDays: days
     };
-
-    return stats;
   } catch (err) {
     console.error('getHeatmapDataInternal error:', err);
     return { error: 'Errore nel recupero dati heatmap: ' + err.message };
@@ -849,6 +749,227 @@ Ricorda: stai assistendo operatori di magazzino, quindi usa un linguaggio chiaro
       error: 'Errore nel servizio chat',
       details: err.message
     });
+  }
+});
+
+// ============================================
+// DATABASE ADMIN ENDPOINTS (DEMO ONLY)
+// ============================================
+
+// API: Get current DB configuration (sanitized)
+app.get('/api/admin/db-config', async (req, res) => {
+  res.json({
+    server: dbConfig.server || 'Non configurato',
+    database: dbConfig.database || 'Non configurato',
+    user: dbConfig.user || 'Non configurato',
+    // Password is intentionally not returned
+  });
+});
+
+// API: Update DB configuration (DEMO ONLY)
+app.post('/api/admin/db-config', async (req, res) => {
+  try {
+    const { server, database, user, password } = req.body;
+    
+    if (!server || !database || !user || !password) {
+      return res.status(400).json({ error: 'Tutti i campi sono obbligatori' });
+    }
+    
+    // Update the config
+    await updateDbConfig({ server, database, user, password });
+    
+    // Test the new connection
+    try {
+      const pool = await sql.connect(dbConfig);
+      await pool.request().query('SELECT 1 as test');
+      
+      res.json({ 
+        success: true, 
+        message: 'Configurazione aggiornata e connessione verificata',
+        config: {
+          server: dbConfig.server,
+          database: dbConfig.database,
+          user: dbConfig.user,
+        }
+      });
+    } catch (connErr) {
+      res.status(400).json({ 
+        success: false, 
+        error: 'Configurazione salvata ma connessione fallita',
+        details: connErr.message 
+      });
+    }
+    
+  } catch (err) {
+    console.error('Update DB config error:', err);
+    res.status(500).json({ error: 'Errore nell\'aggiornamento configurazione', details: err.message });
+  }
+});
+
+// API: Execute SQL script to create movimenti table
+app.post('/api/admin/create-movimenti-table', async (req, res) => {
+  try {
+    const pool = await sql.connect(dbConfig);
+    
+    // Read SQL file
+    const sqlFilePath = path.join(__dirname, '..', 'create_movimenti_table.sql');
+    
+    if (!fs.existsSync(sqlFilePath)) {
+      return res.status(404).json({ error: 'File SQL non trovato', path: sqlFilePath });
+    }
+    
+    const sqlContent = fs.readFileSync(sqlFilePath, 'utf8');
+    
+    // Split by GO and execute each batch
+    const batches = sqlContent.split(/^\s*GO\s*$/im);
+    const results = [];
+    
+    for (const batch of batches) {
+      const query = batch.trim();
+      if (query && !query.startsWith('--')) {
+        try {
+          await pool.query(query);
+          results.push({ batch: query.substring(0, 50) + '...', status: 'success' });
+        } catch (err) {
+          // Check if it's just a "table already exists" error
+          if (err.message.includes('already an object named')) {
+            results.push({ batch: query.substring(0, 50) + '...', status: 'skipped', reason: 'Oggetto già esistente' });
+          } else {
+            results.push({ batch: query.substring(0, 50) + '...', status: 'error', error: err.message });
+          }
+        }
+      }
+    }
+    
+    res.json({ success: true, message: 'Tabella egmovimentimag3d creata/verificata', results });
+    
+  } catch (err) {
+    console.error('Create movimenti table error:', err);
+    res.status(500).json({ error: 'Errore nella creazione tabella', details: err.message });
+  }
+});
+
+// API: Execute SQL views
+app.post('/api/admin/apply-views', async (req, res) => {
+  try {
+    const pool = await sql.connect(dbConfig);
+    
+    const viewsDir = path.join(__dirname, '..', 'sql', 'views');
+    
+    if (!fs.existsSync(viewsDir)) {
+      return res.status(404).json({ error: 'Directory views non trovata', path: viewsDir });
+    }
+    
+    const files = fs.readdirSync(viewsDir).filter(f => f.endsWith('.sql'));
+    const results = [];
+    
+    for (const file of files) {
+      const filePath = path.join(viewsDir, file);
+      const content = fs.readFileSync(filePath, 'utf8');
+      
+      // Split by GO command
+      const batches = content.split(/^\s*GO\s*$/im);
+      
+      for (const batch of batches) {
+        const query = batch.trim();
+        if (query) {
+          try {
+            await pool.query(query);
+            results.push({ file, batch: query.substring(0, 50) + '...', status: 'success' });
+          } catch (err) {
+            results.push({ file, batch: query.substring(0, 50) + '...', status: 'error', error: err.message });
+          }
+        }
+      }
+    }
+    
+    res.json({ success: true, message: 'Views applicate', results });
+    
+  } catch (err) {
+    console.error('Apply views error:', err);
+    res.status(500).json({ error: 'Errore nell\'applicazione delle views', details: err.message });
+  }
+});
+
+// API: Run all DB setup (table + views)
+app.post('/api/admin/setup-db', async (req, res) => {
+  try {
+    const pool = await sql.connect(dbConfig);
+    const allResults = { table: [], views: [] };
+    
+    // 1. Create movimenti table
+    const tableSqlPath = path.join(__dirname, '..', 'create_movimenti_table.sql');
+    if (fs.existsSync(tableSqlPath)) {
+      const tableSql = fs.readFileSync(tableSqlPath, 'utf8');
+      const batches = tableSql.split(/^\s*GO\s*$/im);
+      
+      for (const batch of batches) {
+        const query = batch.trim();
+        if (query && !query.startsWith('--')) {
+          try {
+            await pool.query(query);
+            allResults.table.push({ status: 'success' });
+          } catch (err) {
+            if (err.message.includes('already an object named')) {
+              allResults.table.push({ status: 'skipped', reason: 'Già esistente' });
+            } else {
+              allResults.table.push({ status: 'error', error: err.message });
+            }
+          }
+        }
+      }
+    }
+    
+    // 2. Apply views
+    const viewsDir = path.join(__dirname, '..', 'sql', 'views');
+    if (fs.existsSync(viewsDir)) {
+      const files = fs.readdirSync(viewsDir).filter(f => f.endsWith('.sql'));
+      
+      for (const file of files) {
+        const filePath = path.join(viewsDir, file);
+        const content = fs.readFileSync(filePath, 'utf8');
+        const batches = content.split(/^\s*GO\s*$/im);
+        
+        for (const batch of batches) {
+          const query = batch.trim();
+          if (query) {
+            try {
+              await pool.query(query);
+              allResults.views.push({ file, status: 'success' });
+            } catch (err) {
+              allResults.views.push({ file, status: 'error', error: err.message });
+            }
+          }
+        }
+      }
+    }
+    
+    const tableSuccess = allResults.table.every(r => r.status !== 'error');
+    const viewsSuccess = allResults.views.every(r => r.status !== 'error');
+    
+    res.json({
+      success: tableSuccess && viewsSuccess,
+      message: tableSuccess && viewsSuccess 
+        ? 'Setup database completato con successo' 
+        : 'Setup completato con alcuni errori',
+      results: allResults
+    });
+    
+  } catch (err) {
+    console.error('Setup DB error:', err);
+    res.status(500).json({ error: 'Errore nel setup del database', details: err.message });
+  }
+});
+
+// API: Test DB connection
+app.get('/api/admin/test-connection', async (req, res) => {
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request().query('SELECT 1 as test');
+    res.json({ success: true, message: 'Connessione al database riuscita' });
+  } catch (err) {
+    console.error('DB connection test error:', err);
+    res.status(500).json({ success: false, error: 'Connessione fallita', details: err.message });
   }
 });
 

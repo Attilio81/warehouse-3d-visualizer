@@ -68,9 +68,8 @@ export const AisleLabels: React.FC<AisleLabelsProps> = ({ locations, visible = t
             rotation={[-Math.PI / 2, 0, 0]}
             fontSize={1.8}
             color="#3B82F6"
-            anchorX="center"
             anchorY="middle"
-            font={undefined}
+            font="https://fonts.gstatic.com/s/roboto/v18/KFOmCnqEu92Fr1Mu4mxM.woff"
           >
             {info.aisle}
             <meshBasicMaterial color="#3B82F6" transparent opacity={0.9} />
@@ -94,12 +93,12 @@ export const AisleLabels: React.FC<AisleLabelsProps> = ({ locations, visible = t
           color="#22C55E"
           anchorX="center"
           anchorY="middle"
-          font={undefined}
+          font="https://fonts.gstatic.com/s/roboto/v18/KFOmCnqEu92Fr1Mu4mxM.woff"
         >
-          
+
           <meshBasicMaterial color="#22C55E" transparent opacity={0.9} />
         </Text>
-        
+
         {/* Ground marker for shipping zone */}
         <mesh position={[0, -0.48, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <circleGeometry args={[5, 32]} />

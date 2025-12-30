@@ -149,18 +149,16 @@ export function ChatBot() {
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[85%] p-3 rounded-2xl shadow-sm ${
-                    msg.role === 'user'
+                  className={`max-w-[85%] p-3 rounded-2xl shadow-sm ${msg.role === 'user'
                       ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-br-sm'
                       : 'bg-white text-gray-800 rounded-bl-sm border border-gray-200'
-                  }`}
+                    }`}
                 >
                   <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
                     {msg.content}
                   </p>
-                  <span className={`text-xs mt-1 block ${
-                    msg.role === 'user' ? 'text-blue-100' : 'text-gray-400'
-                  }`}>
+                  <span className={`text-xs mt-1 block ${msg.role === 'user' ? 'text-blue-100' : 'text-gray-400'
+                    }`}>
                     {new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
@@ -194,7 +192,7 @@ export function ChatBot() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Scrivi un messaggio..."
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 pr-12 text-sm text-gray-900 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   disabled={loading}
                   maxLength={1000}
                 />

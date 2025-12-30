@@ -122,7 +122,7 @@ const Racks: React.FC<{
       ref={meshRef}
       args={[undefined, undefined, locations.length]}
       castShadow
-      receiveShadow
+      receiveShadow={false}
       onClick={(e) => {
         e.stopPropagation();
         if (e.instanceId !== undefined && locations[e.instanceId]) {
@@ -407,7 +407,12 @@ export const WarehouseScene = forwardRef<WarehouseController, WarehouseSceneProp
   }, [locations]);
 
   return (
-    <Canvas shadows gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}>
+    <Canvas
+      shadows
+      dpr={[1, 2]}
+      performance={{ min: 0.5 }}
+      gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}
+    >
       <PerspectiveCamera makeDefault position={[50, 50, 50]} fov={50} far={10000} />
 
       {!fpsMode ? (
@@ -419,6 +424,7 @@ export const WarehouseScene = forwardRef<WarehouseController, WarehouseSceneProp
           maxDistance={5000}
           enableDamping
           dampingFactor={0.1}
+          regress
         />
       ) : (
         <FirstPersonControls />
@@ -436,7 +442,7 @@ export const WarehouseScene = forwardRef<WarehouseController, WarehouseSceneProp
         position={[80, 150, 80]}
         intensity={2}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[512, 512]}
         shadow-camera-far={500}
         shadow-camera-left={-100}
         shadow-camera-right={100}
@@ -464,9 +470,9 @@ export const WarehouseScene = forwardRef<WarehouseController, WarehouseSceneProp
       <Environment preset="warehouse" />
 
       {/* Post-processing effects */}
-      <EffectComposer>
+      <EffectComposer multisampling={0} enableNormalPass={false}>
         <Bloom
-          luminanceThreshold={0.6}
+          luminanceThreshold={0.8}
           luminanceSmoothing={0.9}
           intensity={0.4}
           radius={0.8}
