@@ -70,7 +70,7 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
 
     try {
       const locationCode = location.locationCode || location.originalString;
-      const apiBase = `http://${window.location.hostname}:4000`;
+      const apiBase = '';
       const response = await fetch(`${apiBase}/api/movimenti/storico/${encodeURIComponent(locationCode)}?limit=20`);
 
       if (!response.ok) {
@@ -173,11 +173,10 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
                 <div
                   key={idx}
                   onClick={() => setSelectedArticle(selectedArticle?.productCode === article.productCode ? null : article)}
-                  className={`p-2 rounded border cursor-pointer transition-colors ${
-                    selectedArticle?.productCode === article.productCode
+                  className={`p-2 rounded border cursor-pointer transition-colors ${selectedArticle?.productCode === article.productCode
                       ? 'bg-blue-900/40 border-blue-500'
                       : 'bg-slate-900/50 border-slate-700 hover:border-slate-500'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-white text-sm">{article.productCode}</span>
@@ -301,8 +300,8 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
                   <div
                     key={idx}
                     className={`p-2 rounded text-xs border ${mov.tipo === 'entrata'
-                        ? 'bg-green-900/20 border-green-700/50'
-                        : 'bg-red-900/20 border-red-700/50'
+                      ? 'bg-green-900/20 border-green-700/50'
+                      : 'bg-red-900/20 border-red-700/50'
                       }`}
                   >
                     <div className="flex items-center justify-between mb-1">
@@ -409,8 +408,8 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
                       onClick={onStartSelectDestination}
                       disabled={isSubmitting}
                       className={`px-3 py-2 rounded border transition-colors flex items-center gap-1 ${isSelectingDestination
-                          ? 'bg-blue-600 border-blue-400 text-white animate-pulse'
-                          : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                        ? 'bg-blue-600 border-blue-400 text-white animate-pulse'
+                        : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
                         }`}
                       title="Seleziona sulla mappa"
                     >
@@ -429,8 +428,8 @@ export const LocationDetail: React.FC<LocationDetailProps> = ({
                 type="submit"
                 disabled={isSubmitting || !destinationCode.trim() || quantity <= 0}
                 className={`w-full py-2 px-3 rounded font-medium text-sm flex items-center justify-center gap-2 transition-colors ${isSubmitting || !destinationCode.trim() || quantity <= 0
-                    ? 'bg-gray-600 cursor-not-allowed text-gray-400'
-                    : 'bg-green-600 hover:bg-green-500 text-white'
+                  ? 'bg-gray-600 cursor-not-allowed text-gray-400'
+                  : 'bg-green-600 hover:bg-green-500 text-white'
                   }`}
               >
                 {isSubmitting ? (

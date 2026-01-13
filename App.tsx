@@ -12,7 +12,7 @@ import { normalizeHeatmapData } from './utils/heatmapUtils';
 import { generateOptimizationSuggestions, calculateOptimalPickingPath } from './utils/optimization';
 
 // Dynamic API base URL - uses the same hostname as the frontend but port 4000
-const API_BASE = `http://${window.location.hostname}:4000`;
+const API_BASE = ''; // Use relative paths (handled by Proxy in dev, Nginx/Docker in prod)
 const API_URL = `${API_BASE}/api/warehouse-data`;
 const API_MOVEMENTS_URL = `${API_BASE}/api/movimenti`;
 const API_HEATMAP_URL = `${API_BASE}/api/optimization/heatmap`;

@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  warehouse-visualizer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: warehouse-3d-visualizer
+    ports:
+      - "3001:3000"
+      - "4001:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      # Database Configuration
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_SERVER=${DB_SERVER}
+      - DB_DATABASE=${DB_DATABASE}
+      # AI ChatBot Configuration
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - warehouse-network
+
+networks:
+  warehouse-network:
+    driver: bridge

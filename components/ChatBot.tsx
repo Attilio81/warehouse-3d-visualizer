@@ -14,7 +14,7 @@ export function ChatBot() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const API_BASE = `http://${window.location.hostname}:4000`;
+  const API_BASE = '';
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -150,8 +150,8 @@ export function ChatBot() {
               >
                 <div
                   className={`max-w-[85%] p-3 rounded-2xl shadow-sm ${msg.role === 'user'
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-br-sm'
-                      : 'bg-white text-gray-800 rounded-bl-sm border border-gray-200'
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-br-sm'
+                    : 'bg-white text-gray-800 rounded-bl-sm border border-gray-200'
                     }`}
                 >
                   <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">

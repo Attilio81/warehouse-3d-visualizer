@@ -13,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = 4000;
+const port = process.env.PORT || 4000;
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
@@ -43,14 +43,14 @@ async function updateDbConfig(newConfig) {
   } catch (err) {
     // Ignore close errors
   }
-  
+
   // Update config
   dbConfig = {
     ...dbConfig,
     ...newConfig,
     options: dbConfig.options, // Keep options unchanged
   };
-  
+
   return dbConfig;
 }
 
@@ -770,21 +770,21 @@ app.get('/api/admin/db-config', async (req, res) => {
 app.post('/api/admin/db-config', async (req, res) => {
   try {
     const { server, database, user, password } = req.body;
-    
+
     if (!server || !database || !user || !password) {
       return res.status(400).json({ error: 'Tutti i campi sono obbligatori' });
     }
-    
+
     // Update the config
     await updateDbConfig({ server, database, user, password });
-    
+
     // Test the new connection
     try {
       const pool = await sql.connect(dbConfig);
       await pool.request().query('SELECT 1 as test');
-      
-      res.json({ 
-        success: true, 
+
+      res.json({
+        success: true,
         message: 'Configurazione aggiornata e connessione verificata',
         config: {
           server: dbConfig.server,
@@ -793,13 +793,13 @@ app.post('/api/admin/db-config', async (req, res) => {
         }
       });
     } catch (connErr) {
-      res.status(400).json({ 
-        success: false, 
+      res.status(400).json({
+        success: false,
         error: 'Configurazione salvata ma connessione fallita',
-        details: connErr.message 
+        details: connErr.message
       });
     }
-    
+
   } catch (err) {
     console.error('Update DB config error:', err);
     res.status(500).json({ error: 'Errore nell\'aggiornamento configurazione', details: err.message });
@@ -810,20 +810,20 @@ app.post('/api/admin/db-config', async (req, res) => {
 app.post('/api/admin/create-movimenti-table', async (req, res) => {
   try {
     const pool = await sql.connect(dbConfig);
-    
+
     // Read SQL file
     const sqlFilePath = path.join(__dirname, '..', 'create_movimenti_table.sql');
-    
+
     if (!fs.existsSync(sqlFilePath)) {
       return res.status(404).json({ error: 'File SQL non trovato', path: sqlFilePath });
     }
-    
+
     const sqlContent = fs.readFileSync(sqlFilePath, 'utf8');
-    
+
     // Split by GO and execute each batch
     const batches = sqlContent.split(/^\s*GO\s*$/im);
     const results = [];
-    
+
     for (const batch of batches) {
       const query = batch.trim();
       if (query && !query.startsWith('--')) {
@@ -840,9 +840,9 @@ app.post('/api/admin/create-movimenti-table', async (req, res) => {
         }
       }
     }
-    
+
     res.json({ success: true, message: 'Tabella egmovimentimag3d creata/verificata', results });
-    
+
   } catch (err) {
     console.error('Create movimenti table error:', err);
     res.status(500).json({ error: 'Errore nella creazione tabella', details: err.message });
@@ -853,23 +853,23 @@ app.post('/api/admin/create-movimenti-table', async (req, res) => {
 app.post('/api/admin/apply-views', async (req, res) => {
   try {
     const pool = await sql.connect(dbConfig);
-    
+
     const viewsDir = path.join(__dirname, '..', 'sql', 'views');
-    
+
     if (!fs.existsSync(viewsDir)) {
       return res.status(404).json({ error: 'Directory views non trovata', path: viewsDir });
     }
-    
+
     const files = fs.readdirSync(viewsDir).filter(f => f.endsWith('.sql'));
     const results = [];
-    
+
     for (const file of files) {
       const filePath = path.join(viewsDir, file);
       const content = fs.readFileSync(filePath, 'utf8');
-      
+
       // Split by GO command
       const batches = content.split(/^\s*GO\s*$/im);
-      
+
       for (const batch of batches) {
         const query = batch.trim();
         if (query) {
@@ -882,9 +882,9 @@ app.post('/api/admin/apply-views', async (req, res) => {
         }
       }
     }
-    
+
     res.json({ success: true, message: 'Views applicate', results });
-    
+
   } catch (err) {
     console.error('Apply views error:', err);
     res.status(500).json({ error: 'Errore nell\'applicazione delle views', details: err.message });
@@ -896,13 +896,13 @@ app.post('/api/admin/setup-db', async (req, res) => {
   try {
     const pool = await sql.connect(dbConfig);
     const allResults = { table: [], views: [] };
-    
+
     // 1. Create movimenti table
     const tableSqlPath = path.join(__dirname, '..', 'create_movimenti_table.sql');
     if (fs.existsSync(tableSqlPath)) {
       const tableSql = fs.readFileSync(tableSqlPath, 'utf8');
       const batches = tableSql.split(/^\s*GO\s*$/im);
-      
+
       for (const batch of batches) {
         const query = batch.trim();
         if (query && !query.startsWith('--')) {
@@ -919,17 +919,17 @@ app.post('/api/admin/setup-db', async (req, res) => {
         }
       }
     }
-    
+
     // 2. Apply views
     const viewsDir = path.join(__dirname, '..', 'sql', 'views');
     if (fs.existsSync(viewsDir)) {
       const files = fs.readdirSync(viewsDir).filter(f => f.endsWith('.sql'));
-      
+
       for (const file of files) {
         const filePath = path.join(viewsDir, file);
         const content = fs.readFileSync(filePath, 'utf8');
         const batches = content.split(/^\s*GO\s*$/im);
-        
+
         for (const batch of batches) {
           const query = batch.trim();
           if (query) {
@@ -943,18 +943,18 @@ app.post('/api/admin/setup-db', async (req, res) => {
         }
       }
     }
-    
+
     const tableSuccess = allResults.table.every(r => r.status !== 'error');
     const viewsSuccess = allResults.views.every(r => r.status !== 'error');
-    
+
     res.json({
       success: tableSuccess && viewsSuccess,
-      message: tableSuccess && viewsSuccess 
-        ? 'Setup database completato con successo' 
+      message: tableSuccess && viewsSuccess
+        ? 'Setup database completato con successo'
         : 'Setup completato con alcuni errori',
       results: allResults
     });
-    
+
   } catch (err) {
     console.error('Setup DB error:', err);
     res.status(500).json({ error: 'Errore nel setup del database', details: err.message });
@@ -973,6 +973,33 @@ app.get('/api/admin/test-connection', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Backend server listening at http://localhost:${port}`);
+// ============================================
+// STATIC FILES SERVING (PRODUCTION)
+// ============================================
+
+// Serve static files from the dist directory
+// In Docker, dist is copied to /app/dist and server is in /app/server
+// So strictly speaking, from /app/server/index.js, dist is at ../dist
+const distPath = path.join(__dirname, '..', 'dist');
+
+if (fs.existsSync(distPath)) {
+  console.log('Serving static files from:', distPath);
+  app.use(express.static(distPath));
+
+  // Handle SPA routing - return index.html for any non-API request
+  // Express 5 requires regex syntax for wildcard
+  app.get(/(.*)/, (req, res) => {
+    if (req.path.startsWith('/api')) {
+      // If it's an API request that wasn't handled, return 404 JSON
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+} else {
+  console.log('Dist directory not found at:', distPath);
+  console.log('Running in API-only mode (development)');
+}
+
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Server listening at http://0.0.0.0:${port}`);
 });

@@ -14,7 +14,7 @@ const dbConfig = {
     },
 };
 
-const VIEWS_DIR = path.join(__dirname, 'sql', 'views');
+const VIEWS_DIR = path.join(__dirname, '..', 'sql', 'views');
 
 async function applyViews() {
     try {

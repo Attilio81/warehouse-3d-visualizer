@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  X,
   TrendingUp,
   MapPin,
   Package,
@@ -13,8 +12,10 @@ import {
   BarChart3,
   Loader2
 } from 'lucide-react';
-import { OptimalLocationSuggestion, HeatmapData, PickingPath, LocationData } from '../types';
+import { OptimalLocationSuggestion, HeatmapData, PickingPath } from '../types';
 import { calculateHeatmapStats, getTopLocations, getHeatmapColor } from '../utils/heatmapUtils';
+import { Modal } from './common/Modal';
+import { EmptyState } from './common/EmptyState';
 
 interface OptimizationPanelProps {
   isOpen: boolean;
@@ -45,61 +46,54 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   const heatmapStats = calculateHeatmapStats(heatmapData);
   const topLocations = getTopLocations(heatmapData, 10);
 
-  if (!isOpen) return null;
+  const headerContent = (
+    <div>
+      <h2 className="text-2xl font-bold text-white">Ottimizzazione Logistica</h2>
+      <p className="text-sm text-slate-400 font-normal">Analisi e suggerimenti per migliorare l'efficienza</p>
+    </div>
+  );
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-900 rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-slate-700">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-700">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-2 rounded-lg">
-              <TrendingUp size={24} className="text-white" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-white">Ottimizzazione Logistica</h2>
-              <p className="text-sm text-slate-400">Analisi e suggerimenti per migliorare l'efficienza</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-slate-800 rounded"
-          >
-            <X size={24} />
-          </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={headerContent}
+      headerIcon={
+        <div className="bg-blue-600 p-2 rounded-lg">
+          <TrendingUp size={24} className="text-white" />
         </div>
-
+      }
+      maxWidth="max-w-4xl"
+    >
+      <div className="flex flex-col h-full">
         {/* Tabs */}
-        <div className="flex border-b border-slate-700 bg-slate-800/50">
+        <div className="flex border-b border-slate-700 bg-slate-800/50 mb-6">
           <button
             onClick={() => setActiveTab('suggestions')}
-            className={`flex-1 py-3 px-4 font-medium transition-colors flex items-center justify-center gap-2 ${
-              activeTab === 'suggestions'
-                ? 'text-blue-400 border-b-2 border-blue-400 bg-slate-800'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/70'
-            }`}
+            className={`flex-1 py-3 px-4 font-medium transition-colors flex items-center justify-center gap-2 ${activeTab === 'suggestions'
+              ? 'text-blue-400 border-b-2 border-blue-400 bg-slate-800'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/70'
+              }`}
           >
             <Zap size={18} />
             Suggerimenti ({suggestions.length})
           </button>
           <button
             onClick={() => setActiveTab('heatmap')}
-            className={`flex-1 py-3 px-4 font-medium transition-colors flex items-center justify-center gap-2 ${
-              activeTab === 'heatmap'
-                ? 'text-blue-400 border-b-2 border-blue-400 bg-slate-800'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/70'
-            }`}
+            className={`flex-1 py-3 px-4 font-medium transition-colors flex items-center justify-center gap-2 ${activeTab === 'heatmap'
+              ? 'text-blue-400 border-b-2 border-blue-400 bg-slate-800'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/70'
+              }`}
           >
             <Activity size={18} />
             Heatmap
           </button>
           <button
             onClick={() => setActiveTab('path')}
-            className={`flex-1 py-3 px-4 font-medium transition-colors flex items-center justify-center gap-2 ${
-              activeTab === 'path'
-                ? 'text-blue-400 border-b-2 border-blue-400 bg-slate-800'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/70'
-            }`}
+            className={`flex-1 py-3 px-4 font-medium transition-colors flex items-center justify-center gap-2 ${activeTab === 'path'
+              ? 'text-blue-400 border-b-2 border-blue-400 bg-slate-800'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/70'
+              }`}
           >
             <Route size={18} />
             Percorso Ottimale
@@ -107,18 +101,16 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="space-y-4">
           {/* Suggestions Tab */}
           {activeTab === 'suggestions' && (
             <div className="space-y-4">
               {suggestions.length === 0 ? (
-                <div className="text-center py-12">
-                  <BarChart3 size={48} className="mx-auto text-slate-600 mb-4" />
-                  <p className="text-slate-400 text-lg">Nessun suggerimento disponibile</p>
-                  <p className="text-slate-500 text-sm mt-2">
-                    Le ubicazioni sono già ottimizzate o non ci sono dati sufficienti
-                  </p>
-                </div>
+                <EmptyState
+                  icon={BarChart3}
+                  title="Nessun suggerimento disponibile"
+                  description="Le ubicazioni sono già ottimizzate o non ci sono dati sufficienti"
+                />
               ) : (
                 <>
                   <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-4">
@@ -160,11 +152,10 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                           </div>
                           <div className="flex items-center gap-2">
                             <div
-                              className={`px-3 py-1 rounded-full text-sm font-bold ${
-                                suggestion.improvementScore >= 30
-                                  ? 'bg-green-600/20 text-green-400'
-                                  : 'bg-yellow-600/20 text-yellow-400'
-                              }`}
+                              className={`px-3 py-1 rounded-full text-sm font-bold ${suggestion.improvementScore >= 30
+                                ? 'bg-green-600/20 text-green-400'
+                                : 'bg-yellow-600/20 text-yellow-400'
+                                }`}
                             >
                               +{suggestion.improvementScore}%
                             </div>
@@ -410,6 +401,6 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };

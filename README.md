@@ -195,6 +195,31 @@ npm run build
 npm run preview
 ```
 
+## 🐳 Installazione con Docker
+
+Se preferisci usare Docker per avviare l'applicazione in un ambiente isolato:
+
+### 1. Prerequisiti
+- **Docker** e **Docker Compose** installati
+- File `.env` configurato (vedi sezione Configurazione sopra)
+  - **Nota Importante**: Se il tuo database SQL Server è sulla macchina host (fuori da Docker), usa `host.docker.internal` (Windows/Mac) o l'IP locale invece di `localhost` in `DB_SERVER`.
+
+### 2. Avvio
+Esegui questo comando nella root del progetto:
+
+```bash
+docker-compose up --build -d
+```
+
+L'applicazione sarà accessibile su `http://localhost:3000`.
+
+### 3. Arresto
+Per fermare i container:
+
+```bash
+docker-compose down
+```
+
 ## 📱 Utilizzo
 
 > 📖 **Per una guida completa e dettagliata, consulta il [Manuale Utente](MANUALE_UTENTE.md)**
